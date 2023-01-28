@@ -24,6 +24,8 @@ type Client struct {
 	mu                  sync.RWMutex
 	currentPath         string
 	canvas              fyne.CanvasObject
+	mainCanvas          fyne.CanvasObject
+	downloadCanvas      fyne.CanvasObject
 	zoneCombo           *widget.Select
 	blenderPathInput    *widget.Entry
 	everQuestPathInput  *widget.Entry
@@ -126,7 +128,7 @@ func New(window fyne.Window) (*Client, error) {
 
 	c.zoneCombo.SetSelected(c.cfg.LastZone)
 
-	c.canvas = container.NewVBox(
+	c.mainCanvas = container.NewVBox(
 		container.New(
 			layout.NewFormLayout(),
 			widget.NewLabel("Blender Path:"),
@@ -141,18 +143,32 @@ func New(window fyne.Window) (*Client, error) {
 		newZoneButton,
 		container.New(
 			layout.NewFormLayout(),
-			widget.NewLabel("zone: "),
+			widget.NewLabel("Zone: "),
 			container.NewHBox(c.zoneCombo, zoneRefreshButton),
 		),
 		container.NewVBox(
 			c.folderOpenButton,
 			c.blenderOpenButton,
+			c.exportEQGCheck,
 			c.convertButton,
 		),
-		c.exportEQGCheck,
 		c.progressBar,
 		c.statusLabel,
 	)
+
+	c.downloadCanvas = container.NewVBox(
+		c.downloadEQGZIButton,
+		c.progressBar,
+		c.statusLabel,
+	)
+
+	_, err = os.Stat("tools/eqgzi.exe")
+	if err != nil {
+		c.canvas = c.downloadCanvas
+	} else {
+		c.canvas = c.mainCanvas
+	}
+
 	return c, nil
 }
 
@@ -188,7 +204,6 @@ func (c *Client) zoneRefresh() []string {
 		zones = append(zones, filepath.Base(entry.Name()))
 	}
 
-	c.statusLabel.SetText("Refreshed zones")
 	return zones
 }
 
@@ -301,15 +316,6 @@ func (c *Client) onExportEQGCheck(value bool) {
 		c.statusLabel.SetText(fmt.Sprintf("failed save: %s", err))
 		return
 	}
-}
-
-func (c *Client) onDownloadEQGZIButton() {
-	c.statusLabel.Hide()
-	c.progressBar.Show()
-	defer func() {
-		c.statusLabel.Show()
-		c.progressBar.Hide()
-	}()
 }
 
 func (c *Client) onNewZoneSaveButton() {
