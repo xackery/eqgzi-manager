@@ -35,3 +35,5 @@ bin/
 fyne_metadata_init.go
 *.syso
 *.rc
+
+fynn-cross*
