@@ -7,6 +7,13 @@ run:
 	go run main.go
 run-mobile:
 	go run -tags mobile main.go
+
+bundle:
+	fyne bundle --package client -name blenderIcon assets/blender.svg > client/bundle.go
+	fyne bundle --package client -name baseBlend --append assets/base.blend >> client/bundle.go
+	fyne bundle --package client -name convertText --append assets/convert.bat >> client/bundle.go
+	fyne bundle --package client -name copyEQText --append assets/copy_eq.bat >> client/bundle.go
+	fyne bundle --package client -name copyServerText --append assets/copy_server.bat >> client/bundle.go
 build-all: build-darwin build-ios build-linux build-windows build-android
 build-darwin:
 	@echo "build-darwin: compiling"
