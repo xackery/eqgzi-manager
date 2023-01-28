@@ -11,7 +11,6 @@ import (
 	"sync"
 
 	"github.com/xackery/eqgzi-manager/config"
-	"golang.org/x/sys/windows/registry"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -526,31 +525,4 @@ func (c *Client) enableActions() {
 	c.convertButton.Enable()
 	c.exportEQGCheck.Enable()
 	c.exportServerCheck.Enable()
-}
-
-func (c *Client) onBlenderDetectButton() {
-	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Classes\blendfile\DefaultIcon`, registry.QUERY_VALUE)
-	if err != nil {
-		c.logf("Failed registry: %s", err)
-		return
-	}
-	defer k.Close()
-
-	s, _, err := k.GetStringValue("")
-	if err != nil {
-		c.logf("Failed registry get: %s", err)
-		return
-	}
-	s = strings.ReplaceAll(s, `"`, "")
-	s = strings.TrimSuffix(s, ", 1")
-	s = strings.TrimSuffix(s, "blender-launcher.exe")
-	//s += "blender.exe"
-	c.blenderPathInput.SetText(s)
-	c.cfg.BlenderPath = s
-	err = c.cfg.Save()
-	if err != nil {
-		c.logf("Failed save: %s", err)
-		return
-	}
-	c.logf("Updated blender path")
 }
