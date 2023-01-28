@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+
+	"fyne.io/fyne/v2"
 )
 
 func (c *Client) onDownloadEQGZIButton() {
@@ -19,15 +21,20 @@ func (c *Client) onDownloadEQGZIButton() {
 
 	err := c.downloadEQGZI()
 	if err != nil {
-		fmt.Println("failed", err)
-		c.statusLabel.SetText("failed " + err.Error())
+		c.logf("Failed: %s", err)
 		return
 	}
 
 	c.window.SetContent(c.mainCanvas)
+	c.window.Resize(fyne.NewSize(600, 600))
+	c.window.CenterOnScreen()
 }
 
 func (c *Client) downloadEQGZI() error {
+
+	c.downloadEQGZIButton.Disable()
+	defer c.downloadEQGZIButton.Enable()
+	pct := float64(0)
 
 	type Reply struct {
 		TagName string `json:"tag_name"`
@@ -37,11 +44,18 @@ func (c *Client) downloadEQGZI() error {
 			BrowserDownloadURL string `json:"browser_download_url"`
 		} `json:"assets"`
 	}
+	pct += 0.1
+	c.progressBar.SetValue(pct)
+
 	gitReply := &Reply{}
 	req, err := http.NewRequest("GET", "https://api.github.com/repos/xackery/eqgzi/releases/latest", nil)
 	if err != nil {
 		return fmt.Errorf("new git request: %w", err)
 	}
+
+	pct += 0.05
+	c.progressBar.SetValue(pct)
+
 	client := http.DefaultClient
 	resp, err := client.Do(req)
 	if err != nil {
@@ -55,6 +69,9 @@ func (c *Client) downloadEQGZI() error {
 		return fmt.Errorf("decode git request: %w", err)
 	}
 	assetURL := ""
+	pct += 0.05
+	c.progressBar.SetValue(pct)
+
 	zipName := fmt.Sprintf("eqgzi-%s.zip", gitReply.TagName)
 	for _, asset := range gitReply.Assets {
 		if asset.Name != zipName {
@@ -65,7 +82,9 @@ func (c *Client) downloadEQGZI() error {
 	if assetURL == "" {
 		return fmt.Errorf("download eqgzi zip not found")
 	}
-	fmt.Println("downloading", assetURL)
+	c.logf("downloading %s", assetURL)
+	pct += 0.20
+	c.progressBar.SetValue(pct)
 
 	err = os.Mkdir("cache", os.ModePerm)
 	if err != nil && !os.IsExist(err) {
@@ -99,7 +118,10 @@ func (c *Client) downloadEQGZI() error {
 		}
 	}
 
-	fmt.Println("extracting", zipName)
+	pct += 0.1
+	c.progressBar.SetValue(pct)
+
+	c.logf("Extracting %s", zipName)
 	err = os.Mkdir("tools", os.ModePerm)
 	if err != nil && !os.IsExist(err) {
 		return fmt.Errorf("mkdir tools: %w", err)
@@ -136,9 +158,20 @@ func (c *Client) downloadEQGZI() error {
 			return fmt.Errorf("copy %s: %w", zf.Name, err)
 		}
 
+		pct += 0.05
+		if pct >= 1 {
+			pct = 1
+		}
+		c.progressBar.SetValue(pct)
+
 		dstFile.Close()
 		fileInArchive.Close()
 	}
 
+	pct = 1
+	c.progressBar.SetValue(pct)
+
+	c.cfg.EQGZIVersion = gitReply.TagName
+	c.cfg.Save()
 	return nil
 }

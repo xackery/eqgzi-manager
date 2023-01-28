@@ -28,5 +28,6 @@ func main() {
 	}
 
 	w.SetContent(c.GetContent())
+	w.CenterOnScreen()
 	w.ShowAndRun()
 }
