@@ -5,6 +5,7 @@ go 1.19
 require (
 	fyne.io/fyne/v2 v2.3.0
 	github.com/jbsmith7741/toml v0.3.1-0.20171003150610-484e047de162
+	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad
 )
 
 require (
@@ -32,7 +33,6 @@ require (
 	golang.org/x/image v0.0.0-20220601225756-64ec528b34cd // indirect
 	golang.org/x/mobile v0.0.0-20211207041440-4e6c2922fdee // indirect
 	golang.org/x/net v0.0.0-20211118161319-6a13c67c3ce4 // indirect
-	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	honnef.co/go/js/dom v0.0.0-20210725211120-f030747120f2 // indirect

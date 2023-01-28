@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/xackery/eqgzi-manager/config"
+	"golang.org/x/sys/windows/registry"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -49,6 +50,7 @@ type Client struct {
 	exportEQGCheck         *widget.Check
 	exportServerCheck      *widget.Check
 	downloadEQGZIButton    *widget.Button
+	blenderDetectButton    *widget.Button
 }
 
 func New(window fyne.Window) (*Client, error) {
@@ -72,12 +74,21 @@ func New(window fyne.Window) (*Client, error) {
 	c.statusLabel = widget.NewLabel("")
 	c.statusLabel.Wrapping = fyne.TextWrapBreak
 	c.statusLabel.Alignment = fyne.TextAlignCenter
-	c.convertButton = widget.NewButtonWithIcon("TODO convert", theme.NewThemedResource(eqIcon), c.onConvertButton)
-	c.blenderOpenButton = widget.NewButtonWithIcon("TODO in blender", theme.NewThemedResource(blenderIcon), c.onBlenderOpen)
-	c.folderOpenButton = widget.NewButtonWithIcon("TODO in folder", theme.FolderOpenIcon(), c.onFolderOpen)
-	c.eqgziOpenButton = widget.NewButtonWithIcon("TODO in eqgzi", theme.QuestionIcon(), c.onEqgziOpenButton)
-	c.downloadEQGZIButton = widget.NewButtonWithIcon("Download EQGZI", theme.DownloadIcon(), c.onDownloadEQGZIButton)
 
+	c.convertButton = widget.NewButtonWithIcon("Create zone.eqg", theme.NewThemedResource(eqIcon), c.onConvertButton)
+	c.blenderOpenButton = widget.NewButtonWithIcon("Open zone in blender", theme.NewThemedResource(blenderIcon), c.onBlenderOpen)
+	c.folderOpenButton = widget.NewButtonWithIcon("Open zone folder", theme.FolderOpenIcon(), c.onFolderOpen)
+	c.eqgziOpenButton = widget.NewButtonWithIcon("Debug zone in eqgzi-gui", theme.QuestionIcon(), c.onEqgziOpenButton)
+	c.downloadEQGZIButton = widget.NewButtonWithIcon("Download EQGZI", theme.DownloadIcon(), c.onDownloadEQGZIButton)
+	c.blenderPathInput = widget.NewEntry()
+	if c.cfg.BlenderPath != "" {
+		c.blenderPathInput.SetText(c.cfg.BlenderPath)
+	}
+
+	c.blenderDetectButton = widget.NewButtonWithIcon("Detect", theme.SearchIcon(), c.onBlenderDetectButton)
+	if c.cfg.BlenderPath == "" {
+		c.onBlenderDetectButton()
+	}
 	c.setEverQuestPathButton = widget.NewButtonWithIcon("Set EQ Path", theme.FolderNewIcon(), func() {
 		c.setServerPopup.Show()
 		c.window.Canvas().Focus(c.setServerName)
@@ -105,7 +116,7 @@ func New(window fyne.Window) (*Client, error) {
 
 	zones := c.zoneRefresh()
 
-	c.zoneCombo = widget.NewSelect(zones, c.onZoneSelect)
+	c.zoneCombo = widget.NewSelect(zones, c.onZoneCombo)
 
 	zoneRefreshButton := widget.NewButtonWithIcon("", theme.ViewRefreshIcon(), c.onZoneRefresh)
 
@@ -136,11 +147,6 @@ func New(window fyne.Window) (*Client, error) {
 		c.window.Canvas(),
 	)
 
-	c.blenderPathInput = widget.NewEntry()
-	if c.cfg.BlenderPath != "" {
-		c.blenderPathInput.SetText(c.cfg.BlenderPath)
-	}
-
 	c.progressBar = widget.NewProgressBar()
 	c.progressBar.Hide()
 
@@ -157,6 +163,8 @@ func New(window fyne.Window) (*Client, error) {
 	if !isValidZone {
 		if len(zones) > 0 {
 			c.cfg.LastZone = zones[0]
+		} else {
+			c.disableActions()
 		}
 	}
 
@@ -166,7 +174,10 @@ func New(window fyne.Window) (*Client, error) {
 		container.New(
 			layout.NewFormLayout(),
 			widget.NewLabel("Blender Path:"),
-			c.blenderPathInput,
+			container.NewHBox(
+				c.blenderPathInput,
+				c.blenderDetectButton,
+			),
 			/*widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
 				dia := dialog.NewFileOpen(func(uc fyne.URIReadCloser, err error) {
 
@@ -240,6 +251,15 @@ func (c *Client) zoneRefresh() []string {
 	currentPath := c.currentPath
 	c.mu.RUnlock()
 
+	_, err := os.Stat("zones")
+	if os.IsNotExist(err) {
+		err = os.Mkdir("zones", os.ModePerm)
+		if err != nil {
+			c.logf("Failed to mkdir zone: %s", err)
+			return zones
+		}
+	}
+
 	entries, err := os.ReadDir(fmt.Sprintf("%s/zones/", currentPath))
 	if err != nil {
 		c.logf("Failed to read dir: %s", err)
@@ -264,20 +284,24 @@ func (c *Client) onConvertButton() {
 	eqPath := c.cfg.EQPath
 	isServerCopy := c.cfg.IsServerCopy
 	serverPath := c.cfg.ServerPath
+	blenderPath := c.cfg.BlenderPath
 	c.mu.RUnlock()
 	c.logf("Converting %s", zone)
+
+	env := []string{
+		fmt.Sprintf(`PATH=%s;%s\tools;%s`, blenderPath, currentPath, `C:\src\eqgzi\out`),
+		fmt.Sprintf(`EQPATH=%s`, eqPath),
+		fmt.Sprintf(`EQGZI=%s\tools\`, currentPath),
+		fmt.Sprintf(`ZONE=%s`, zone),
+		fmt.Sprintf(`EQSERVERPATH=%s`, serverPath),
+		fmt.Sprintf(`BLENDERPATH=%s`, blenderPath),
+	}
 
 	cmd := exec.Command(fmt.Sprintf("%s/zones/%s/convert.bat", currentPath, zone))
 	cmd.Dir = fmt.Sprintf("%s/zones/%s/", currentPath, zone)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = []string{
-		fmt.Sprintf(`PATH=%s;%s;%s\tools;%s`, os.Getenv("PATH"), `C:\Program Files\Blender Foundation\Blender 2.93`, currentPath, `C:\src\eqgzi\out`),
-		fmt.Sprintf(`EQPATH=%s`, eqPath),
-		fmt.Sprintf(`EQGZI=%s\tools\`, currentPath),
-		fmt.Sprintf(`ZONE=%s`, zone),
-		fmt.Sprintf(`EQSERVERPATH=%s`, serverPath),
-	}
+	cmd.Env = env
 	err := cmd.Run()
 	if err != nil {
 		c.logf("Failed to run convert.bat: %s", err)
@@ -289,10 +313,7 @@ func (c *Client) onConvertButton() {
 		cmd.Dir = fmt.Sprintf("%s/%s/", currentPath, zone)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		cmd.Env = []string{
-			fmt.Sprintf("PATH=%s;%s;%s;%s", os.Getenv("PATH"), `d:\games\eq\tools`, `C:\Program Files\Blender Foundation\Blender 2.93`, `C:\src\eqgzi\out`),
-			`EQPATH=c:\games\eq\everquestparty\`,
-		}
+		cmd.Env = env
 		err = cmd.Run()
 		if err != nil {
 			c.logf("Failed to run copy_eq.bat: %s", err)
@@ -304,10 +325,7 @@ func (c *Client) onConvertButton() {
 		cmd.Dir = fmt.Sprintf("%s/%s/", currentPath, zone)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		cmd.Env = []string{
-			fmt.Sprintf("PATH=%s;%s;%s;%s", os.Getenv("PATH"), `d:\games\eq\tools`, `C:\Program Files\Blender Foundation\Blender 2.93`, `C:\src\eqgzi\out`),
-			`EQPATH=c:\games\eq\everquestparty\`,
-		}
+		cmd.Env = env
 		err = cmd.Run()
 		if err != nil {
 			c.logf("Failed to run copy_server.bat: %s", err)
@@ -325,12 +343,12 @@ func (c *Client) onBlenderOpen() {
 	c.mu.RUnlock()
 
 	c.logf("Opening %s in Blender", zone)
-	cmd := exec.Command(blenderPath, fmt.Sprintf("%s/zones/%s/%s.blend", currentPath, zone, zone))
+	cmd := exec.Command(blenderPath+"blender.exe", fmt.Sprintf("%s/zones/%s/%s.blend", currentPath, zone, zone))
 	//cmd.Dir = fmt.Sprintf("%s/", blenderPath)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = []string{}
-	err := cmd.Run()
+	err := cmd.Start()
 	if err != nil {
 		c.logf("Failed to run blender: %s", err)
 	}
@@ -347,12 +365,12 @@ func (c *Client) onFolderOpen() {
 		exePath = "open"
 	}
 
-	cmd := exec.Command(exePath, fmt.Sprintf("%s/zones/%s", currentPath, zone))
+	cmd := exec.Command(exePath, fmt.Sprintf(`%s\zones\%s`, currentPath, zone))
 	//cmd.Dir = fmt.Sprintf("%s/", blenderPath)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = []string{}
-	err := cmd.Run()
+	err := cmd.Start()
 	if err != nil {
 		c.logf("Failed to open: %s", err)
 		return
@@ -360,7 +378,7 @@ func (c *Client) onFolderOpen() {
 	c.logf("Opened %s folder", zone)
 }
 
-func (c *Client) onZoneSelect(value string) {
+func (c *Client) onZoneCombo(value string) {
 	c.mu.Lock()
 	c.cfg.LastZone = value
 	err := c.cfg.Save()
@@ -372,6 +390,7 @@ func (c *Client) onZoneSelect(value string) {
 	c.convertButton.SetText(fmt.Sprintf("Create %s.eqg", c.cfg.LastZone))
 	c.folderOpenButton.SetText(fmt.Sprintf("Open %s folder", c.cfg.LastZone))
 	c.eqgziOpenButton.SetText(fmt.Sprintf("Debug %s in eqgzi-gui", c.cfg.LastZone))
+	c.enableActions()
 	c.mu.Unlock()
 	c.logf("Focused on %s", value)
 }
@@ -451,6 +470,12 @@ func (c *Client) onNewZoneSaveButton() {
 		return
 	}
 
+	err = os.WriteFile(fmt.Sprintf("zones/%s/white.png", newZone), whitePng.Content(), os.ModePerm)
+	if err != nil {
+		c.popupStatus.SetText(fmt.Sprintf("Failed creating white.png: %s", newZone, err))
+		return
+	}
+
 	c.onZoneRefresh()
 	c.zoneCombo.SetSelected(newZone)
 	c.logf("Created zones/%s", newZone)
@@ -483,4 +508,49 @@ func (c *Client) logf(format string, a ...interface{}) {
 	text := fmt.Sprintf(format, a...)
 	fmt.Println(text)
 	c.statusLabel.SetText(text)
+}
+
+func (c *Client) disableActions() {
+	c.blenderOpenButton.Disable()
+	c.folderOpenButton.Disable()
+	c.eqgziOpenButton.Disable()
+	c.convertButton.Disable()
+	c.exportEQGCheck.Disable()
+	c.exportServerCheck.Disable()
+}
+
+func (c *Client) enableActions() {
+	c.blenderOpenButton.Enable()
+	c.folderOpenButton.Enable()
+	c.eqgziOpenButton.Enable()
+	c.convertButton.Enable()
+	c.exportEQGCheck.Enable()
+	c.exportServerCheck.Enable()
+}
+
+func (c *Client) onBlenderDetectButton() {
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Classes\blendfile\DefaultIcon`, registry.QUERY_VALUE)
+	if err != nil {
+		c.logf("Failed registry: %s", err)
+		return
+	}
+	defer k.Close()
+
+	s, _, err := k.GetStringValue("")
+	if err != nil {
+		c.logf("Failed registry get: %s", err)
+		return
+	}
+	s = strings.ReplaceAll(s, `"`, "")
+	s = strings.TrimSuffix(s, ", 1")
+	s = strings.TrimSuffix(s, "blender-launcher.exe")
+	//s += "blender.exe"
+	c.blenderPathInput.SetText(s)
+	c.cfg.BlenderPath = s
+	err = c.cfg.Save()
+	if err != nil {
+		c.logf("Failed save: %s", err)
+		return
+	}
+	c.logf("Updated blender path")
 }
