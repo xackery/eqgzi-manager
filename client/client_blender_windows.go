@@ -1,6 +1,11 @@
+//go build windows
+//+windows
+
 package client
 
 import (
+	"strings"
+
 	"golang.org/x/sys/windows/registry"
 )
 

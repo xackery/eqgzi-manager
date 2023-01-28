@@ -439,6 +439,11 @@ func (c *Client) onNewZoneSaveButton() {
 		return
 	}
 
+	if strings.Contains(newZone, ".") {
+		c.popupStatus.SetText(fmt.Sprintf("Failed: zone %s shouldn't have a period", newZone))
+		return
+	}
+
 	err = os.Mkdir(fmt.Sprintf("zones/%s/", newZone), os.ModePerm)
 	if err != nil {
 		c.popupStatus.SetText(fmt.Sprintf("Failed creating folder: %s", err))
