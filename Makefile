@@ -15,6 +15,7 @@ bundle:
 	fyne bundle --package client -name copyEQText --append assets/copy_eq.bat >> client/bundle.go
 	fyne bundle --package client -name copyServerText --append assets/copy_server.bat >> client/bundle.go
 	fyne bundle --package client -name eqIcon --append assets/eq.svg >> client/bundle.go
+	fyne bundle --package client -name whitePng --append assets/white.png >> client/bundle.go
 build-all: build-darwin build-ios build-linux build-windows build-android
 build-darwin:
 	@echo "build-darwin: compiling"
