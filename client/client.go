@@ -289,7 +289,7 @@ func (c *Client) onConvertButton() {
 	c.logf("Converting %s", zone)
 
 	env := []string{
-		fmt.Sprintf(`PATH=%s;%s\tools;%s`, blenderPath, currentPath, `C:\src\eqgzi\out`),
+		fmt.Sprintf(`PATH=%s;%s\tools`, blenderPath, currentPath),
 		fmt.Sprintf(`EQPATH=%s`, eqPath),
 		fmt.Sprintf(`EQGZI=%s\tools\`, currentPath),
 		fmt.Sprintf(`ZONE=%s`, zone),
@@ -472,7 +472,7 @@ func (c *Client) onNewZoneSaveButton() {
 
 	err = os.WriteFile(fmt.Sprintf("zones/%s/white.png", newZone), whitePng.Content(), os.ModePerm)
 	if err != nil {
-		c.popupStatus.SetText(fmt.Sprintf("Failed creating white.png: %s", newZone, err))
+		c.popupStatus.SetText(fmt.Sprintf("Failed creating white.png: %s", err))
 		return
 	}
 
