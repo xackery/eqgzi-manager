@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"sync"
 
 	"github.com/xackery/eqgzi-manager/config"
@@ -20,36 +19,43 @@ import (
 )
 
 type Client struct {
-	mu                     sync.RWMutex
-	currentPath            string
-	canvas                 fyne.CanvasObject
-	mainCanvas             fyne.CanvasObject
-	downloadCanvas         fyne.CanvasObject
-	zoneCombo              *widget.Select
-	blenderPathInput       *widget.Entry
-	newZonePopup           *widget.PopUp
-	newZoneName            *widget.Entry
-	newZoneSaveButton      *widget.Button
-	newZoneCancelButton    *widget.Button
-	popupStatus            *widget.Label
-	setServerPathButton    *widget.Button
-	setServerPopup         *widget.PopUp
-	setServerName          *widget.Entry
-	setServerSaveButton    *widget.Button
-	setServerCancelButton  *widget.Button
-	setEverQuestPathButton *widget.Button
-	progressBar            *widget.ProgressBar
-	window                 fyne.Window
-	cfg                    *config.Config
-	statusLabel            *widget.Label
-	blenderOpenButton      *widget.Button
-	folderOpenButton       *widget.Button
-	eqgziOpenButton        *widget.Button
-	convertButton          *widget.Button
-	exportEQGCheck         *widget.Check
-	exportServerCheck      *widget.Check
-	downloadEQGZIButton    *widget.Button
-	blenderDetectButton    *widget.Button
+	mu                    sync.RWMutex
+	currentPath           string
+	canvas                fyne.CanvasObject
+	mainCanvas            fyne.CanvasObject
+	downloadCanvas        fyne.CanvasObject
+	zoneCombo             *widget.Select
+	blenderPathInput      *widget.Entry
+	newZoneButton         *widget.Button
+	newZonePopup          *widget.PopUp
+	newZoneName           *widget.Entry
+	newZoneSaveButton     *widget.Button
+	newZoneCancelButton   *widget.Button
+	popupStatus           *widget.Label
+	exportServerCheck     *widget.Check
+	setServerButton       *widget.Button
+	setServerPopup        *widget.PopUp
+	setServerName         *widget.Entry
+	setServerSaveButton   *widget.Button
+	setServerCancelButton *widget.Button
+	labelServer           *widget.Label
+	exportEQGCheck        *widget.Check
+	setEQButton           *widget.Button
+	setEQPopup            *widget.PopUp
+	setEQName             *widget.Entry
+	setEQSaveButton       *widget.Button
+	setEQCancelButton     *widget.Button
+	labelEQ               *widget.Label
+	progressBar           *widget.ProgressBar
+	window                fyne.Window
+	cfg                   *config.Config
+	statusLabel           *widget.Label
+	blenderOpenButton     *widget.Button
+	folderOpenButton      *widget.Button
+	eqgziOpenButton       *widget.Button
+	convertButton         *widget.Button
+	downloadEQGZIButton   *widget.Button
+	blenderDetectButton   *widget.Button
 }
 
 func New(window fyne.Window) (*Client, error) {
@@ -74,6 +80,13 @@ func New(window fyne.Window) (*Client, error) {
 	c.statusLabel.Wrapping = fyne.TextWrapBreak
 	c.statusLabel.Alignment = fyne.TextAlignCenter
 
+	c.popupStatus = widget.NewLabel("")
+	c.popupStatus.Wrapping = fyne.TextWrapBreak
+	c.popupStatus.Alignment = fyne.TextAlignCenter
+	c.newZoneInit()
+	c.newSetServerInit()
+	c.newSetEQInit()
+
 	c.convertButton = widget.NewButtonWithIcon("Create zone.eqg", theme.NewThemedResource(eqIcon), c.onConvertButton)
 	c.blenderOpenButton = widget.NewButtonWithIcon("Open zone in blender", theme.NewThemedResource(blenderIcon), c.onBlenderOpen)
 	c.folderOpenButton = widget.NewButtonWithIcon("Open zone folder", theme.FolderOpenIcon(), c.onFolderOpen)
@@ -88,63 +101,30 @@ func New(window fyne.Window) (*Client, error) {
 	if c.cfg.BlenderPath == "" {
 		c.onBlenderDetectButton()
 	}
-	c.setEverQuestPathButton = widget.NewButtonWithIcon("Set EQ Path", theme.FolderNewIcon(), func() {
-		c.setServerPopup.Show()
-		c.window.Canvas().Focus(c.setServerName)
-	})
 
 	c.exportEQGCheck = widget.NewCheck("Copy .eqg to EverQuest", c.onExportEQGCheck)
 	c.exportEQGCheck.Checked = c.cfg.IsEQCopy
 	if c.cfg.IsEQCopy {
-		c.setEverQuestPathButton.Show()
+		c.setEQButton.Show()
 	} else {
-		c.setEverQuestPathButton.Hide()
+		c.setEQButton.Hide()
 	}
-	c.setServerPathButton = widget.NewButtonWithIcon("Set Server Path", theme.FolderNewIcon(), func() {
-		c.setServerPopup.Show()
-		c.window.Canvas().Focus(c.setServerName)
-	})
+	c.labelEQ = widget.NewLabel(c.cfg.EQPath)
 
 	c.exportServerCheck = widget.NewCheck("Copy nav meshes to Server", c.onExportServerCheck)
 	c.exportServerCheck.Checked = c.cfg.IsServerCopy
 	if c.cfg.IsServerCopy {
-		c.setServerPathButton.Show()
+		c.setServerButton.Show()
 	} else {
-		c.setServerPathButton.Hide()
+		c.setServerButton.Hide()
 	}
+	c.labelServer = widget.NewLabel(c.cfg.ServerPath)
 
 	zones := c.zoneRefresh()
 
 	c.zoneCombo = widget.NewSelect(zones, c.onZoneCombo)
 
 	zoneRefreshButton := widget.NewButtonWithIcon("", theme.ViewRefreshIcon(), c.onZoneRefresh)
-
-	newZoneButton := widget.NewButtonWithIcon("Create New Zone", theme.FolderNewIcon(), func() {
-		c.newZonePopup.Show()
-		c.window.Canvas().Focus(c.newZoneName)
-	})
-
-	c.popupStatus = widget.NewLabel("")
-	c.popupStatus.Wrapping = fyne.TextWrapBreak
-	c.popupStatus.Alignment = fyne.TextAlignCenter
-
-	c.newZoneSaveButton = widget.NewButtonWithIcon("Save", theme.DocumentSaveIcon(), c.onNewZoneSaveButton)
-	c.newZoneCancelButton = widget.NewButtonWithIcon("Cancel", theme.CancelIcon(), c.onNewZoneCancelButton)
-
-	c.newZoneName = widget.NewEntry()
-	c.newZoneName.OnSubmitted = func(string) { c.onNewZoneSaveButton() }
-	c.newZonePopup = widget.NewModalPopUp(
-		container.NewVBox(
-			widget.NewLabel("Create a new zone"),
-			c.newZoneName,
-			container.NewHBox(
-				c.newZoneSaveButton,
-				c.newZoneCancelButton,
-			),
-			c.popupStatus,
-		),
-		c.window.Canvas(),
-	)
 
 	c.progressBar = widget.NewProgressBar()
 	c.progressBar.Hide()
@@ -188,7 +168,7 @@ func New(window fyne.Window) (*Client, error) {
 			}),*/
 		),
 		widget.NewLabel(""),
-		newZoneButton,
+		c.newZoneButton,
 		container.NewCenter(
 			container.NewHBox(
 				widget.NewLabel("Zone: "),
@@ -201,11 +181,13 @@ func New(window fyne.Window) (*Client, error) {
 			c.blenderOpenButton,
 			container.NewHBox(
 				c.exportEQGCheck,
-				c.setEverQuestPathButton,
+				c.setEQButton,
+				c.labelEQ,
 			),
 			container.NewHBox(
 				c.exportServerCheck,
-				c.setServerPathButton,
+				c.setServerButton,
+				c.labelServer,
 			),
 			c.convertButton,
 			c.eqgziOpenButton,
@@ -275,65 +257,6 @@ func (c *Client) zoneRefresh() []string {
 	return zones
 }
 
-func (c *Client) onConvertButton() {
-	c.mu.RLock()
-	currentPath := c.currentPath
-	zone := c.cfg.LastZone
-	isEQCopy := c.cfg.IsEQCopy
-	eqPath := c.cfg.EQPath
-	isServerCopy := c.cfg.IsServerCopy
-	serverPath := c.cfg.ServerPath
-	blenderPath := c.cfg.BlenderPath
-	c.mu.RUnlock()
-	c.logf("Converting %s", zone)
-
-	env := []string{
-		fmt.Sprintf(`PATH=%s;%s\tools`, blenderPath, currentPath),
-		fmt.Sprintf(`EQPATH=%s`, eqPath),
-		fmt.Sprintf(`EQGZI=%s\tools\`, currentPath),
-		fmt.Sprintf(`ZONE=%s`, zone),
-		fmt.Sprintf(`EQSERVERPATH=%s`, serverPath),
-		fmt.Sprintf(`BLENDERPATH=%s`, blenderPath),
-	}
-
-	cmd := exec.Command(fmt.Sprintf("%s/zones/%s/convert.bat", currentPath, zone))
-	cmd.Dir = fmt.Sprintf("%s/zones/%s/", currentPath, zone)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Env = env
-	err := cmd.Run()
-	if err != nil {
-		c.logf("Failed to run convert.bat: %s", err)
-		return
-	}
-
-	if isEQCopy {
-		cmd = exec.Command(fmt.Sprintf("%s/%s/copy_eq.bat", currentPath, zone))
-		cmd.Dir = fmt.Sprintf("%s/%s/", currentPath, zone)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Env = env
-		err = cmd.Run()
-		if err != nil {
-			c.logf("Failed to run copy_eq.bat: %s", err)
-			return
-		}
-	}
-	if isServerCopy {
-		cmd = exec.Command(fmt.Sprintf("%s/%s/copy_server.bat", currentPath, zone))
-		cmd.Dir = fmt.Sprintf("%s/%s/", currentPath, zone)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Env = env
-		err = cmd.Run()
-		if err != nil {
-			c.logf("Failed to run copy_server.bat: %s", err)
-			return
-		}
-	}
-
-}
-
 func (c *Client) onBlenderOpen() {
 	c.mu.RLock()
 	currentPath := c.currentPath
@@ -399,9 +322,9 @@ func (c *Client) onExportEQGCheck(value bool) {
 	defer c.mu.Unlock()
 	c.cfg.IsEQCopy = value
 	if c.cfg.IsEQCopy {
-		c.setEverQuestPathButton.Show()
+		c.setEQButton.Show()
 	} else {
-		c.setEverQuestPathButton.Hide()
+		c.setEQButton.Hide()
 	}
 	err := c.cfg.Save()
 	if err != nil {
@@ -415,80 +338,15 @@ func (c *Client) onExportServerCheck(value bool) {
 	defer c.mu.Unlock()
 	c.cfg.IsServerCopy = value
 	if c.cfg.IsServerCopy {
-		c.setServerPathButton.Show()
+		c.setServerButton.Show()
 	} else {
-		c.setServerPathButton.Hide()
+		c.setServerButton.Hide()
 	}
 	err := c.cfg.Save()
 	if err != nil {
 		c.logf("Failed saving after servercheck: %s", err)
 		return
 	}
-}
-
-func (c *Client) onNewZoneSaveButton() {
-	if c.newZoneName.Text == "" {
-		c.popupStatus.SetText("Failed: zone cannot be empty")
-		return
-	}
-
-	newZone := strings.ToLower(strings.TrimSpace(c.newZoneName.Text))
-	_, err := os.Stat(fmt.Sprintf("zones/%s", newZone))
-	if err == os.ErrNotExist {
-		c.popupStatus.SetText(fmt.Sprintf("Failed: zone %s already exists", newZone))
-		return
-	}
-
-	if strings.Contains(newZone, ".") {
-		c.popupStatus.SetText(fmt.Sprintf("Failed: zone %s shouldn't have a period", newZone))
-		return
-	}
-
-	err = os.Mkdir(fmt.Sprintf("zones/%s/", newZone), os.ModePerm)
-	if err != nil {
-		c.popupStatus.SetText(fmt.Sprintf("Failed creating folder: %s", err))
-		return
-	}
-
-	err = os.WriteFile(fmt.Sprintf("zones/%s/convert.bat", newZone), convertText.Content(), os.ModePerm)
-	if err != nil {
-		c.popupStatus.SetText(fmt.Sprintf("Failed creating convert.bat: %s", err))
-		return
-	}
-
-	err = os.WriteFile(fmt.Sprintf("zones/%s/copy_eq.bat", newZone), copyEQText.Content(), os.ModePerm)
-	if err != nil {
-		c.popupStatus.SetText(fmt.Sprintf("Failed creating copy_eq.bat: %s", err))
-		return
-	}
-
-	err = os.WriteFile(fmt.Sprintf("zones/%s/copy_server.bat", newZone), copyServerText.Content(), os.ModePerm)
-	if err != nil {
-		c.popupStatus.SetText(fmt.Sprintf("Failed creating copy_server.bat: %s", err))
-		return
-	}
-
-	err = os.WriteFile(fmt.Sprintf("zones/%s/%s.blend", newZone, newZone), baseBlend.Content(), os.ModePerm)
-	if err != nil {
-		c.popupStatus.SetText(fmt.Sprintf("Failed creating %s.blend: %s", newZone, err))
-		return
-	}
-
-	err = os.WriteFile(fmt.Sprintf("zones/%s/white.png", newZone), whitePng.Content(), os.ModePerm)
-	if err != nil {
-		c.popupStatus.SetText(fmt.Sprintf("Failed creating white.png: %s", err))
-		return
-	}
-
-	c.onZoneRefresh()
-	c.zoneCombo.SetSelected(newZone)
-	c.logf("Created zones/%s", newZone)
-	c.newZonePopup.Hide()
-}
-
-func (c *Client) onNewZoneCancelButton() {
-	c.logf("Cancelled new zone")
-	c.newZonePopup.Hide()
 }
 
 func (c *Client) onEqgziOpenButton() {

@@ -15,11 +15,12 @@ var (
 
 func main() {
 	if Version == "" {
-		Version = "EXPERIMENTAL"
+		Version = string(client.VersionText.Content())
 	}
 	log.Println("initializing", Version)
 
 	a := app.New()
+
 	w := a.NewWindow(fmt.Sprintf("eqgzi-manager v%s", Version))
 	c, err := client.New(w)
 	if err != nil {
