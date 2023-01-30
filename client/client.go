@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/xackery/eqgzi-manager/config"
 
@@ -450,6 +451,7 @@ func (c *Client) onNavMeshEditButton() {
 	cmd.Dir = fmt.Sprintf("%s/tools/map_edit/", currentPath)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	err := cmd.Run()
 	if err != nil {
 		c.logf("Failed map-edit: %s", err)

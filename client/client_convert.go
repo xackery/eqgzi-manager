@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"syscall"
 )
 
 func (c *Client) onConvertButton() {
@@ -23,7 +24,8 @@ func (c *Client) onConvertButton() {
 	c.logf("Converting %s", zone)
 
 	c.progressBar.Show()
-	c.progressBar.Value = 0
+	c.progress = 0
+	c.progressBar.SetValue(c.addProgress(0.1))
 	c.statusLabel.Hide()
 	defer func() {
 		c.progressBar.Hide()
@@ -40,6 +42,7 @@ func (c *Client) onConvertButton() {
 	}
 
 	cmd := exec.Command(fmt.Sprintf("%s/zones/%s/convert.bat", currentPath, zone))
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	cmd.Dir = fmt.Sprintf("%s/zones/%s/", currentPath, zone)
 	cmd.Env = env
 
@@ -60,7 +63,7 @@ func (c *Client) onConvertButton() {
 	}
 
 	reader := io.MultiReader(stdout, stderr)
-
+	c.progressBar.SetValue(c.addProgress(0.1))
 	err = c.processOutput(reader, currentPath, zone, "convert.log")
 	if err != nil {
 		c.logf("Failed stdout: %s", err)
@@ -74,6 +77,7 @@ func (c *Client) onConvertButton() {
 
 	if isEQCopy {
 		cmd = exec.Command(fmt.Sprintf("%s/zones/%s/copy_eq.bat", currentPath, zone))
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 		cmd.Dir = fmt.Sprintf("%s/zones/%s/", currentPath, zone)
 		cmd.Env = env
 		stdout, err := cmd.StdoutPipe()
@@ -102,11 +106,13 @@ func (c *Client) onConvertButton() {
 			c.logf("Failed copy_eq.bat: %s", err)
 			return
 		}
+		c.progressBar.SetValue(c.addProgress(0.1))
 
 	}
 
 	if isServerCopy {
 		cmd = exec.Command(fmt.Sprintf("%s/zones/%s/copy_server.bat", currentPath, zone))
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 		cmd.Dir = fmt.Sprintf("%s/zones/%s/", currentPath, zone)
 		cmd.Env = env
 		stdout, err := cmd.StdoutPipe()
@@ -135,6 +141,7 @@ func (c *Client) onConvertButton() {
 			c.logf("Failed copy_server.bat: %s", err)
 			return
 		}
+		c.progressBar.SetValue(c.addProgress(0.1))
 
 	}
 	c.logf("Created %s.eqg", zone)
@@ -174,6 +181,7 @@ func (c *Client) processOutput(in io.Reader, currentPath string, zone string, lo
 				c.logf("minor note %s:%d %s %s", logName, lineNumber, line, err)
 			} else {
 				step = stepNum
+				c.progressBar.SetValue(c.addProgress(0.05))
 			}
 		}
 

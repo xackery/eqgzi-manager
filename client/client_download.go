@@ -59,7 +59,7 @@ func (c *Client) downloadEQGZI() error {
 		return fmt.Errorf("new git request: %w", err)
 	}
 
-	c.progressBar.SetValue(c.addProgress(0.025))
+	c.progressBar.SetValue(c.addProgress(0.1))
 
 	client := http.DefaultClient
 	resp, err := client.Do(req)
@@ -74,7 +74,7 @@ func (c *Client) downloadEQGZI() error {
 		return fmt.Errorf("decode git request: %w", err)
 	}
 	assetURL := ""
-	c.progressBar.SetValue(c.addProgress(0.25))
+	c.progressBar.SetValue(c.addProgress(0.05))
 
 	zipName := fmt.Sprintf("eqgzi-%s.zip", gitReply.TagName)
 	for _, asset := range gitReply.Assets {
@@ -87,7 +87,7 @@ func (c *Client) downloadEQGZI() error {
 		return fmt.Errorf("download eqgzi zip not found")
 	}
 	c.logf("downloading %s", assetURL)
-	c.progressBar.SetValue(c.addProgress(0.1))
+	c.progressBar.SetValue(c.addProgress(0.05))
 
 	err = os.Mkdir("cache", os.ModePerm)
 	if err != nil && !os.IsExist(err) {
@@ -165,7 +165,7 @@ func (c *Client) downloadEQGZI() error {
 			return fmt.Errorf("copy %s: %w", zf.Name, err)
 		}
 
-		c.progressBar.SetValue(c.addProgress(0.005))
+		c.progressBar.SetValue(c.addProgress(0.01))
 
 		dstFile.Close()
 		fileInArchive.Close()
@@ -297,7 +297,7 @@ func (c *Client) downloadLantern() error {
 			return fmt.Errorf("copy %s: %w", zf.Name, err)
 		}
 
-		c.progressBar.SetValue(c.addProgress(0.005))
+		c.progressBar.SetValue(c.addProgress(0.05))
 
 		dstFile.Close()
 		fileInArchive.Close()
