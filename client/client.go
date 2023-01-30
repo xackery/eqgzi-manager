@@ -25,6 +25,7 @@ import (
 type Client struct {
 	mu                    sync.RWMutex
 	currentPath           string
+	progress              float64
 	canvas                fyne.CanvasObject
 	mainCanvas            fyne.CanvasObject
 	downloadCanvas        fyne.CanvasObject
@@ -96,7 +97,7 @@ func New(window fyne.Window) (*Client, error) {
 	c.blenderOpenButton = widget.NewButtonWithIcon("Open zone in blender", theme.NewThemedResource(blenderIcon), c.onBlenderOpen)
 	c.folderOpenButton = widget.NewButtonWithIcon("Open zone folder", theme.FolderOpenIcon(), c.onFolderOpen)
 	c.eqgziOpenButton = widget.NewButtonWithIcon("Debug zone in eqgzi-gui", theme.QuestionIcon(), c.onEqgziOpenButton)
-	c.downloadEQGZIButton = widget.NewButtonWithIcon("Download EQGZI", theme.DownloadIcon(), c.onDownloadEQGZIButton)
+	c.downloadEQGZIButton = widget.NewButtonWithIcon("Download EQGZI & Lantern", theme.DownloadIcon(), c.onDownloadEQGZIButton)
 	c.navMeshEditButton = widget.NewButtonWithIcon("Edit Navmesh", theme.GridIcon(), c.onNavMeshEditButton)
 	c.blenderPathInput = widget.NewEntry()
 	if c.cfg.BlenderPath != "" {
@@ -213,8 +214,13 @@ func New(window fyne.Window) (*Client, error) {
 	if err != nil {
 		c.canvas = c.downloadCanvas
 	} else {
-		c.canvas = c.mainCanvas
-		c.window.Resize(fyne.NewSize(600, 600))
+		_, err = os.Stat("tools/LanternExtractor.exe")
+		if err != nil {
+			c.canvas = c.downloadCanvas
+		} else {
+			c.canvas = c.mainCanvas
+			c.window.Resize(fyne.NewSize(600, 600))
+		}
 	}
 
 	return c, nil
@@ -449,4 +455,14 @@ func (c *Client) onNavMeshEditButton() {
 		c.logf("Failed map-edit: %s", err)
 		return
 	}
+}
+
+func (c *Client) addProgress(amount float64) float64 {
+	c.progress += amount
+
+	if c.progress > 1 {
+		fmt.Printf("progress > 1: %0.2f\n", c.progress)
+		c.progress = 1
+	}
+	return c.progress
 }

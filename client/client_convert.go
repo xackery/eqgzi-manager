@@ -32,7 +32,7 @@ func (c *Client) onConvertButton() {
 
 	env := []string{
 		fmt.Sprintf(`PATH=%s;%s\tools`, blenderPath, currentPath),
-		fmt.Sprintf(`EQPATH=%s`, eqPath),
+		fmt.Sprintf(`EQPATH=%s`, strings.ReplaceAll(eqPath, "/", `\`)),
 		fmt.Sprintf(`EQGZI=%s\tools\`, currentPath),
 		fmt.Sprintf(`ZONE=%s`, zone),
 		fmt.Sprintf(`EQSERVERPATH=%s`, strings.ReplaceAll(serverPath, "/", `\`)),
@@ -188,6 +188,10 @@ func (c *Client) processOutput(in io.Reader, currentPath string, zone string, lo
 
 		if failedMessage == "" && strings.Contains(line, "GPUTexture: Blender Texture Not Loaded!") {
 			failedMessage = fmt.Sprintf("%s:%d %s (a reference to a texture in blender is broken)", logName, lineNumber, line)
+		}
+
+		if failedMessage == "" && strings.Contains(line, "failed to find") && strings.Contains(line, "in current path, defined") {
+			failedMessage = fmt.Sprintf("%s:%d %s (texture missing)", logName, lineNumber, line)
 		}
 
 		if failedMessage == "" && isMainCommandError {

@@ -11,13 +11,14 @@ import (
 
 // Config represents a configuration parse
 type Config struct {
-	BlenderPath  string `toml:"blender_path" desc:"Blender Path to start Blender from"`
-	EQPath       string `toml:"eq_path" desc:"EverQuest Path to copy converted zones to"`
-	IsEQCopy     bool   `toml:"eq_copy" desc:"copy eqgzi output to eq path"`
-	LastZone     string `toml:"last_zone" desc:"Last zone selected"`
-	ServerPath   string `toml:"server_path" desc:"EQEmu Server Path, if any"`
-	IsServerCopy bool   `toml:"server_copy" desc:"copy eqgzi output to server path"`
-	EQGZIVersion string `toml:"eqgzi_version" desc:"Last downloaded EQGZI version"`
+	BlenderPath    string `toml:"blender_path" desc:"Blender Path to start Blender from"`
+	EQPath         string `toml:"eq_path" desc:"EverQuest Path to copy converted zones to"`
+	IsEQCopy       bool   `toml:"eq_copy" desc:"copy eqgzi output to eq path"`
+	LastZone       string `toml:"last_zone" desc:"Last zone selected"`
+	ServerPath     string `toml:"server_path" desc:"EQEmu Server Path, if any"`
+	IsServerCopy   bool   `toml:"server_copy" desc:"copy eqgzi output to server path"`
+	EQGZIVersion   string `toml:"eqgzi_version" desc:"Last downloaded EQGZI version"`
+	LanternVersion string `toml:"lantern_version" desc:"Last downloaded LanternExtractor version"`
 }
 
 // NewConfig creates a new configuration
