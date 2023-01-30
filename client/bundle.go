@@ -28,7 +28,7 @@ var copyEQText = &fyne.StaticResource{
 var copyServerText = &fyne.StaticResource{
 	StaticName: "copy_server.bat",
 	StaticContent: []byte(
-		"@echo off\nset last=copy\n\ncopy out\\* %EQSERVERPATH% || goto :error\ngoto :EOF\n\n:error\necho failed during %last% with signal #%errorlevel%\nexit /b %errorlevel%"),
+		"@echo off\nset last=copynav\ncopy map\\*.nav %EQSERVERPATH%\\base || goto :error\n\nset last=copybase\ncopy map\\*.wtr %EQSERVERPATH%\\water || goto :error\ngoto :EOF\n\n:error\necho failed during %last% with signal #%errorlevel%\nexit /b %errorlevel%"),
 }
 var eqIcon = &fyne.StaticResource{
 	StaticName: "eq.svg",
@@ -43,5 +43,5 @@ var whitePng = &fyne.StaticResource{
 var VersionText = &fyne.StaticResource{
 	StaticName: "version.txt",
 	StaticContent: []byte(
-		"0.0.2\n"),
+		"0.0.3 \r\n"),
 }

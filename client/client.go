@@ -1,12 +1,16 @@
 package client
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/xackery/eqgzi-manager/config"
@@ -56,6 +60,7 @@ type Client struct {
 	convertButton         *widget.Button
 	downloadEQGZIButton   *widget.Button
 	blenderDetectButton   *widget.Button
+	navMeshEditButton     *widget.Button
 }
 
 func New(window fyne.Window) (*Client, error) {
@@ -92,6 +97,7 @@ func New(window fyne.Window) (*Client, error) {
 	c.folderOpenButton = widget.NewButtonWithIcon("Open zone folder", theme.FolderOpenIcon(), c.onFolderOpen)
 	c.eqgziOpenButton = widget.NewButtonWithIcon("Debug zone in eqgzi-gui", theme.QuestionIcon(), c.onEqgziOpenButton)
 	c.downloadEQGZIButton = widget.NewButtonWithIcon("Download EQGZI", theme.DownloadIcon(), c.onDownloadEQGZIButton)
+	c.navMeshEditButton = widget.NewButtonWithIcon("Edit Navmesh", theme.GridIcon(), c.onNavMeshEditButton)
 	c.blenderPathInput = widget.NewEntry()
 	if c.cfg.BlenderPath != "" {
 		c.blenderPathInput.SetText(c.cfg.BlenderPath)
@@ -191,6 +197,7 @@ func New(window fyne.Window) (*Client, error) {
 			),
 			c.convertButton,
 			c.eqgziOpenButton,
+			c.navMeshEditButton,
 		),
 		c.progressBar,
 		c.statusLabel,
@@ -355,11 +362,47 @@ func (c *Client) onEqgziOpenButton() {
 	zone := c.cfg.LastZone
 	c.mu.RUnlock()
 
+	path := fmt.Sprintf("%s/tools/gui/settings.lua", currentPath)
+	settings, err := os.ReadFile(path)
+	if err != nil {
+		c.logf("Failed to read settings.lua: %s", err)
+		return
+	}
+
+	w, err := os.Create(path)
+	if err != nil {
+		c.logf("Failed to create settings.lua: %s", err)
+		return
+	}
+	defer w.Close()
+
+	buf := bufio.NewReader(bytes.NewBuffer(settings))
+	for {
+		line, err := buf.ReadString('\n')
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			c.logf("Failed to read settings.lua: %s", err)
+			return
+		}
+
+		if strings.Contains(line, `folder = "`) {
+			line = fmt.Sprintf("	folder = \"%s\",\n", filepath.ToSlash(fmt.Sprintf("%s/zones/%s/out/%s.eqg", currentPath, zone, zone)))
+		}
+
+		_, err = w.WriteString(line)
+		if err != nil {
+			c.logf("Failed to write to settings.lua: %s", err)
+			return
+		}
+	}
+
 	cmd := exec.Command(fmt.Sprintf("%s/tools/eqgzi-gui.exe", currentPath), fmt.Sprintf("%s/zones/%s/out/%s.eqg", currentPath, zone, zone))
 	cmd.Dir = fmt.Sprintf("%s/tools/", currentPath)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		c.logf("Failed eqgzi-gui: %s", err)
 		return
@@ -388,4 +431,22 @@ func (c *Client) enableActions() {
 	c.convertButton.Enable()
 	c.exportEQGCheck.Enable()
 	c.exportServerCheck.Enable()
+}
+
+func (c *Client) onNavMeshEditButton() {
+	c.mu.RLock()
+	currentPath := c.currentPath
+	zone := c.cfg.LastZone
+	c.mu.RUnlock()
+
+	cmd := exec.Command(fmt.Sprintf("%s/tools/map_edit/map_edit.exe", currentPath), zone)
+	c.logf("running command: map_edit %s", zone)
+	cmd.Dir = fmt.Sprintf("%s/tools/map_edit/", currentPath)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	if err != nil {
+		c.logf("Failed map-edit: %s", err)
+		return
+	}
 }

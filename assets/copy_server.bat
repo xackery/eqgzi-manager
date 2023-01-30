@@ -1,7 +1,8 @@
-@echo off
-set last=copy
+set last=copymap
+copy map\*.map %EQSERVERPATH%\base || goto :error
 
-copy out\* %EQSERVERPATH% || goto :error
+set last=copywater
+copy map\*.wtr %EQSERVERPATH%\water || goto :error
 goto :EOF
 
 :error

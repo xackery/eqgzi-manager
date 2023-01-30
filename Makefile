@@ -1,5 +1,5 @@
 NAME ?= eqgzi-manager
-VERSION ?= 0.0.2
+VERSION ?= 0.0.3
 ICON_PNG ?= icon.png
 PACKAGE_NAME ?= com.xackery.eqgzi-manager
 
@@ -37,7 +37,7 @@ build-windows:
 	@echo "build-windows: compiling"
 	-mkdir -p bin
 	-rm bin/${NAME}-*-windows.zip
-	time fyne-cross windows -icon ${ICON_PNG}
+	fyne-cross windows -icon ${ICON_PNG}
 	mv fyne-cross/bin/windows-amd64/${NAME}.exe bin/
 	-rm -rf fyne-cross/
 	cd bin && zip -mv ${NAME}-${VERSION}-windows.zip ${NAME}.exe
