@@ -4,15 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
-	"syscall"
+	"time"
 
 	"github.com/xackery/eqgzi-manager/config"
 
@@ -63,6 +64,7 @@ type Client struct {
 	downloadEQGZIButton   *widget.Button
 	blenderDetectButton   *widget.Button
 	navMeshEditButton     *widget.Button
+	downloadButton        *widget.Button
 }
 
 func New(window fyne.Window) (*Client, error) {
@@ -93,6 +95,8 @@ func New(window fyne.Window) (*Client, error) {
 	c.newZoneInit()
 	c.newSetServerInit()
 	c.newSetEQInit()
+
+	c.downloadButton = widget.NewButtonWithIcon("Download Update", theme.DownloadIcon(), c.onDownloadButton)
 
 	c.convertButton = widget.NewButtonWithIcon("Create zone.eqg", theme.NewThemedResource(eqIcon), c.onConvertButton)
 	c.blenderOpenButton = widget.NewButtonWithIcon("Open zone in blender", theme.NewThemedResource(blenderIcon), c.onBlenderOpen)
@@ -158,6 +162,7 @@ func New(window fyne.Window) (*Client, error) {
 	c.zoneCombo.SetSelected(c.cfg.LastZone)
 
 	c.mainCanvas = container.NewVBox(
+		c.downloadButton,
 		container.New(
 			layout.NewFormLayout(),
 			widget.NewLabel("Blender Path:"),
@@ -224,6 +229,8 @@ func New(window fyne.Window) (*Client, error) {
 		}
 	}
 
+	go c.loop()
+
 	return c, nil
 }
 
@@ -279,7 +286,8 @@ func (c *Client) onBlenderOpen() {
 	c.mu.RUnlock()
 
 	c.logf("Opening %s in Blender", zone)
-	cmd := exec.Command(blenderPath+"blender.exe", fmt.Sprintf("%s/zones/%s/%s.blend", currentPath, zone, zone))
+	cmd := c.createCommand(false, blenderPath+"blender.exe", fmt.Sprintf("%s/zones/%s/%s.blend", currentPath, zone, zone))
+
 	//cmd.Dir = fmt.Sprintf("%s/", blenderPath)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -301,7 +309,7 @@ func (c *Client) onFolderOpen() {
 		exePath = "open"
 	}
 
-	cmd := exec.Command(exePath, fmt.Sprintf(`%s\zones\%s`, currentPath, zone))
+	cmd := c.createCommand(false, exePath, fmt.Sprintf(`%s\zones\%s`, currentPath, zone))
 	//cmd.Dir = fmt.Sprintf("%s/", blenderPath)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -405,7 +413,7 @@ func (c *Client) onEqgziOpenButton() {
 		}
 	}
 
-	cmd := exec.Command(fmt.Sprintf("%s/tools/eqgzi-gui.exe", currentPath), fmt.Sprintf("%s/zones/%s/out/%s.eqg", currentPath, zone, zone))
+	cmd := c.createCommand(false, fmt.Sprintf("%s/tools/eqgzi-gui.exe", currentPath), fmt.Sprintf("%s/zones/%s/out/%s.eqg", currentPath, zone, zone))
 	cmd.Dir = fmt.Sprintf("%s/tools/", currentPath)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -446,12 +454,11 @@ func (c *Client) onNavMeshEditButton() {
 	zone := c.cfg.LastZone
 	c.mu.RUnlock()
 
-	cmd := exec.Command(fmt.Sprintf("%s/tools/map_edit/map_edit.exe", currentPath), zone)
+	cmd := c.createCommand(false, fmt.Sprintf("%s/tools/map_edit/map_edit.exe", currentPath), zone)
 	c.logf("running command: map_edit %s", zone)
 	cmd.Dir = fmt.Sprintf("%s/tools/map_edit/", currentPath)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	err := cmd.Run()
 	if err != nil {
 		c.logf("Failed map-edit: %s", err)
@@ -467,4 +474,68 @@ func (c *Client) addProgress(amount float64) float64 {
 		c.progress = 1
 	}
 	return c.progress
+}
+
+func (c *Client) loop() {
+	err := c.updateCheck()
+	if err != nil {
+		fmt.Println("Failed loop updateCheck:", err)
+	}
+	for {
+		time.Sleep(24 * time.Hour)
+		err := c.updateCheck()
+		if err != nil {
+			fmt.Println("Failed loop updateCheck:", err)
+		}
+	}
+}
+
+func (c *Client) updateCheck() error {
+	err := c.updateCheckLantern()
+	if err != nil {
+		return fmt.Errorf("updateCheckLantern: %w", err)
+	}
+	return nil
+}
+
+func (c *Client) updateCheckLantern() error {
+	c.mu.Lock()
+	lanternVersion := c.cfg.LanternVersion
+	c.mu.Unlock()
+
+	gitReply := &gitReply{}
+	req, err := http.NewRequest("GET", "https://api.github.com/repos/LanternEQ/LanternExtractor/releases/latest", nil)
+	if err != nil {
+		return fmt.Errorf("git request: %w", err)
+	}
+
+	client := http.DefaultClient
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("do git request: %w", err)
+	}
+
+	dec := json.NewDecoder(resp.Body)
+	err = dec.Decode(gitReply)
+	resp.Body.Close()
+	if err != nil {
+		return fmt.Errorf("decode git request: %w", err)
+	}
+	assetURL := ""
+
+	zipName := fmt.Sprintf("LanternExtractor-%s.zip", gitReply.TagName)
+	for _, asset := range gitReply.Assets {
+		if asset.Name != zipName {
+			continue
+		}
+		assetURL = asset.BrowserDownloadURL
+	}
+	if assetURL == "" {
+		return fmt.Errorf("download eqgzi zip not found")
+	}
+
+	if gitReply.TagName == lanternVersion {
+		return nil
+	}
+	return nil
 }

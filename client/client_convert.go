@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
-	"syscall"
 )
 
 func (c *Client) onConvertButton() {
@@ -41,8 +39,7 @@ func (c *Client) onConvertButton() {
 		fmt.Sprintf(`BLENDERPATH=%s`, blenderPath),
 	}
 
-	cmd := exec.Command(fmt.Sprintf("%s/zones/%s/convert.bat", currentPath, zone))
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	cmd := c.createCommand(true, fmt.Sprintf("%s/zones/%s/convert.bat", currentPath, zone))
 	cmd.Dir = fmt.Sprintf("%s/zones/%s/", currentPath, zone)
 	cmd.Env = env
 
@@ -76,8 +73,7 @@ func (c *Client) onConvertButton() {
 	}
 
 	if isEQCopy {
-		cmd = exec.Command(fmt.Sprintf("%s/zones/%s/copy_eq.bat", currentPath, zone))
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		cmd := c.createCommand(true, fmt.Sprintf("%s/zones/%s/copy_eq.bat", currentPath, zone))
 		cmd.Dir = fmt.Sprintf("%s/zones/%s/", currentPath, zone)
 		cmd.Env = env
 		stdout, err := cmd.StdoutPipe()
@@ -111,8 +107,7 @@ func (c *Client) onConvertButton() {
 	}
 
 	if isServerCopy {
-		cmd = exec.Command(fmt.Sprintf("%s/zones/%s/copy_server.bat", currentPath, zone))
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		cmd = c.createCommand(true, fmt.Sprintf("%s/zones/%s/copy_server.bat", currentPath, zone))
 		cmd.Dir = fmt.Sprintf("%s/zones/%s/", currentPath, zone)
 		cmd.Env = env
 		stdout, err := cmd.StdoutPipe()
