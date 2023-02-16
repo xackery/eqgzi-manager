@@ -46,7 +46,7 @@ build-windows:
 	fyne-cross windows -icon ${ICON_PNG}
 	mv fyne-cross/bin/windows-amd64/${NAME}.exe bin/
 	-rm -rf fyne-cross/
-	cd bin && zip -mv ${NAME}-${VERSION}-windows.zip ${NAME}.exe	
+	@#cd bin && zip -mv ${NAME}-${VERSION}-windows.zip ${NAME}.exe
 build-ios:
 	@echo "build-ios: compiling"
 	@-mkdir -p bin
