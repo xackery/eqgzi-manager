@@ -18,17 +18,17 @@ var baseBlend = &fyne.StaticResource{
 var convertText = &fyne.StaticResource{
 	StaticName: "convert.bat",
 	StaticContent: []byte(
-		"@echo off\nset last=blender\n\n:: change soldungb to your zone name\nset zone=%ZONE%\n\n:: change C:\\src\\eqgzi\\out\\convert.py to your eqgzi's path with the file\nblender --background %zone%.blend --python %EQGZI%\\convert.py || goto :error\n\nset last=eqgzi\neqgzi import %zone% || goto :error\n\nset last=azone\ncd out \n%EQGZI%\\azone.exe %zone% || goto :error \ncd ..\ndel out\\azone.log\nrmdir /s /q map\\\nmkdir map\\\nmove out\\%zone%.map map\\\n\nset last=awater\ncd out \n%EQGZI%\\awater.exe %zone% || goto :error\ncd ..\ndel out\\awater.log\nmove out\\%zone%.wtr map\\\n\ngoto :EOF\n\n:error\necho failed during %last% with signal #%errorlevel%\nexit /b %errorlevel%"),
+		"@echo off\nset last=blender\n\n:: change soldungb to your zone name\nset zone=%ZONE%\n\n:: change C:\\src\\eqgzi\\out\\convert.py to your eqgzi's path with the file\nblender --background \"%zone%.blend\" --python \"%EQGZI%\\convert.py\" || goto :error\n\nset last=eqgzi\neqgzi import %zone% || goto :error\n\nset last=azone\ncd out \n%EQGZI%\\azone.exe %zone% || goto :error \ncd ..\ndel out\\azone.log\nrmdir /s /q map\\\nmkdir map\\\nmove out\\%zone%.map map\\\n\nset last=awater\ncd out \n%EQGZI%\\awater.exe %zone% || goto :error\ncd ..\ndel out\\awater.log\nmove out\\%zone%.wtr map\\\n\ngoto :EOF\n\n:error\necho failed during %last% with signal #%errorlevel%\nexit /b %errorlevel%"),
 }
 var copyEQText = &fyne.StaticResource{
 	StaticName: "copy_eq.bat",
 	StaticContent: []byte(
-		"@echo off\nset last=copy\n\ncopy out\\* %EQPATH% || goto :error\ngoto :EOF\n\n:error\necho failed during %last% with signal #%errorlevel%\nexit /b %errorlevel%"),
+		"@echo off\nset last=copy\n\ncopy out\\* \"%EQPATH%\" || goto :error\ngoto :EOF\n\n:error\necho failed during %last% with signal #%errorlevel%\nexit /b %errorlevel%"),
 }
 var copyServerText = &fyne.StaticResource{
 	StaticName: "copy_server.bat",
 	StaticContent: []byte(
-		"@echo off\nset last=copymap\ncopy map\\*.map %EQSERVERPATH%\\base || goto :error\n\nset last=copywater\ncopy map\\*.wtr %EQSERVERPATH%\\water || goto :error\ngoto :EOF\n\n:error\necho failed during %last% with signal #%errorlevel%\nexit /b %errorlevel%"),
+		"@echo off\nset last=copymap\ncopy map\\*.map \"%EQSERVERPATH%\\base\" || goto :error\n\nset last=copywater\ncopy map\\*.wtr \"%EQSERVERPATH%\\water\" || goto :error\ngoto :EOF\n\n:error\necho failed during %last% with signal #%errorlevel%\nexit /b %errorlevel%"),
 }
 var eqIcon = &fyne.StaticResource{
 	StaticName: "eq.svg",
@@ -43,5 +43,5 @@ var whitePng = &fyne.StaticResource{
 var VersionText = &fyne.StaticResource{
 	StaticName: "version.txt",
 	StaticContent: []byte(
-		"0.0.3 \r\n"),
+		"0.0.4 \r\n"),
 }

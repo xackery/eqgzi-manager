@@ -1,7 +1,7 @@
 @echo off
 set last=copy
 
-copy out\* "%EQPATH%" || goto :error
+copy out\* %EQPATH% || goto :error
 goto :EOF
 
 :error

@@ -1,0 +1,6 @@
+4
+1000
+animated_sign1.png
+animated_sign2.png
+animated_sign3.png
+animated_sign4.png

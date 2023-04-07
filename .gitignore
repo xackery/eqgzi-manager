@@ -39,7 +39,7 @@ fyne_metadata_init.go
 fynn-cross*
 eqgzi-manager.conf
 cache/
-zones/
 tools/
 assets/version.txt
 fyne-cross/
+*.blend1

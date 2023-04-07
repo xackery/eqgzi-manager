@@ -1,9 +1,9 @@
 @echo off
 set last=copymap
-copy map\*.map "%EQSERVERPATH%\base" || goto :error
+copy map\*.map %EQSERVERPATH%\base || goto :error
 
 set last=copywater
-copy map\*.wtr "%EQSERVERPATH%\water" || goto :error
+copy map\*.wtr %EQSERVERPATH%\water || goto :error
 goto :EOF
 
 :error

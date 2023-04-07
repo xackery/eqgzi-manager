@@ -1,5 +1,5 @@
 NAME ?= eqgzi-manager
-VERSION ?= 0.0.3
+VERSION ?= 0.0.4
 ICON_PNG ?= icon.png
 PACKAGE_NAME ?= com.xackery.eqgzi-manager
 
