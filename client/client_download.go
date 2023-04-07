@@ -11,6 +11,15 @@ import (
 	"fyne.io/fyne/v2"
 )
 
+type gitReply struct {
+	TagName string `json:"tag_name"`
+	Assets  []struct {
+		Name               string `json:"name"`
+		Size               int    `json:"size"`
+		BrowserDownloadURL string `json:"browser_download_url"`
+	} `json:"assets"`
+}
+
 func (c *Client) onDownloadEQGZIButton() {
 
 	c.downloadEQGZIButton.Disable()
@@ -30,7 +39,7 @@ func (c *Client) onDownloadEQGZIButton() {
 		return
 	}
 
-	err = c.downloadLantern()
+	err = c.onDownloadLantern()
 	if err != nil {
 		c.logf("Failed lantern: %s", err)
 		return
@@ -43,17 +52,9 @@ func (c *Client) onDownloadEQGZIButton() {
 
 func (c *Client) downloadEQGZI() error {
 
-	type Reply struct {
-		TagName string `json:"tag_name"`
-		Assets  []struct {
-			Name               string `json:"name"`
-			Size               int    `json:"size"`
-			BrowserDownloadURL string `json:"browser_download_url"`
-		} `json:"assets"`
-	}
 	c.progressBar.SetValue(c.addProgress(0.1))
 
-	gitReply := &Reply{}
+	gitReply := &gitReply{}
 	req, err := http.NewRequest("GET", "https://api.github.com/repos/xackery/eqgzi/releases/latest", nil)
 	if err != nil {
 		return fmt.Errorf("new git request: %w", err)
@@ -178,19 +179,10 @@ func (c *Client) downloadEQGZI() error {
 	return nil
 }
 
-func (c *Client) downloadLantern() error {
-
-	type Reply struct {
-		TagName string `json:"tag_name"`
-		Assets  []struct {
-			Name               string `json:"name"`
-			Size               int    `json:"size"`
-			BrowserDownloadURL string `json:"browser_download_url"`
-		} `json:"assets"`
-	}
+func (c *Client) onDownloadLantern() error {
 	c.progressBar.SetValue(c.addProgress(0.1))
 
-	gitReply := &Reply{}
+	gitReply := &gitReply{}
 	req, err := http.NewRequest("GET", "https://api.github.com/repos/LanternEQ/LanternExtractor/releases/latest", nil)
 	if err != nil {
 		return fmt.Errorf("new git request: %w", err)
@@ -307,4 +299,8 @@ func (c *Client) downloadLantern() error {
 	c.cfg.LanternVersion = gitReply.TagName
 	c.cfg.Save()
 	return nil
+}
+
+func (c *Client) onDownloadButton() {
+
 }

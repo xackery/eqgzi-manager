@@ -10,6 +10,7 @@ import (
 )
 
 var (
+	// Version is the version of the build
 	Version string
 )
 
