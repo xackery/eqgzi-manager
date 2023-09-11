@@ -302,5 +302,5 @@ func (c *Client) onDownloadLantern() error {
 }
 
 func (c *Client) onDownloadButton() {
-
+	c.logf("TODO: Implement Download Update")
 }

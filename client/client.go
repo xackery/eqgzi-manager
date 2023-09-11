@@ -109,7 +109,7 @@ func New(window fyne.Window) (*Client, error) {
 		c.blenderPathInput.SetText(c.cfg.BlenderPath)
 	}
 
-	c.blenderDetectButton = widget.NewButtonWithIcon("Detect", theme.SearchIcon(), c.onBlenderDetectButton)
+	c.blenderDetectButton = widget.NewButtonWithIcon("Detect Blender Path", theme.SearchIcon(), c.onBlenderDetectButton)
 	if c.cfg.BlenderPath == "" {
 		c.onBlenderDetectButton()
 	}
@@ -163,13 +163,14 @@ func New(window fyne.Window) (*Client, error) {
 
 	c.mainCanvas = container.NewVBox(
 		c.downloadButton,
-		container.New(
-			layout.NewFormLayout(),
-			widget.NewLabel("Blender Path:"),
-			container.NewHBox(
-				c.blenderPathInput,
-				c.blenderDetectButton,
+		widget.NewLabel(""),
+		container.NewVBox(
+			container.New(
+				layout.NewFormLayout(),
+				widget.NewLabel("Blender Path:"),
+				container.NewMax(c.blenderPathInput),
 			),
+			c.blenderDetectButton,
 			/*widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
 				dia := dialog.NewFileOpen(func(uc fyne.URIReadCloser, err error) {
 
