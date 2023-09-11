@@ -43,7 +43,7 @@ build-windows:
 	@echo "build-windows: compiling"
 	-mkdir -p bin
 	-rm bin/${NAME}-*-windows.zip
-	fyne-cross windows -icon ${ICON_PNG} --appID com.xackery.eqgzi-manager
+	fyne-cross windows -icon ${ICON_PNG} -app-id com.xackery.eqgzi-manager
 	mv fyne-cross/bin/windows-amd64/${NAME}.exe bin/
 	-rm -rf fyne-cross/
 	@#cd bin && zip -mv ${NAME}-${VERSION}-windows.zip ${NAME}.exe
