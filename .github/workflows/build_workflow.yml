@@ -27,8 +27,8 @@ jobs:
 
     - name: Build binary
       run: |
-        go install github.com/fyne-io/fyne-cross@latest
-        go install fyne.io/fyne/v2/cmd/fyne@latest
+        go install github.com/fyne-io/fyne-cross@1.4.0
+        go install fyne.io/fyne/v2/cmd/fyne@2.4.0
         make bundle
         make build-windows
 
@@ -38,7 +38,7 @@ jobs:
         set -e
         go test -tags ci -covermode=atomic -coverprofile=coverage.out ./...
         coverage=`go tool cover -func coverage.out | grep total | tr -s '\t' | cut -f 3 | grep -o '[^%]*'`
-        
+
     - name: Update PR Coverage
       uses: shogo82148/actions-goveralls@v1
       with:
@@ -48,7 +48,7 @@ jobs:
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         automatic_release_tag: "${{ env.VERSION }}.${{ github.run_number }}"
-        prerelease: false
+        prerelease: true
         title: "${{ env.VERSION }}.${{ github.run_number }}"
         files: |
-          bin/eqgzi-manager.exe          
+          bin/eqgzi-manager.exe

@@ -43,3 +43,5 @@ tools/
 assets/version.txt
 fyne-cross/
 *.blend1
+zones/
+.DS_Store
