@@ -39,12 +39,6 @@ func (c *Client) onDownloadEQGZIButton() {
 		return
 	}
 
-	err = c.onDownloadLantern()
-	if err != nil {
-		c.logf("Failed lantern: %s", err)
-		return
-	}
-
 	c.window.SetContent(c.mainCanvas)
 	c.window.Resize(fyne.NewSize(600, 600))
 	c.window.CenterOnScreen()
@@ -178,7 +172,7 @@ func (c *Client) downloadEQGZI() error {
 	c.cfg.Save()
 	return nil
 }
-
+/*
 func (c *Client) onDownloadLantern() error {
 	c.progressBar.SetValue(c.addProgress(0.1))
 
@@ -299,7 +293,7 @@ func (c *Client) onDownloadLantern() error {
 	c.cfg.LanternVersion = gitReply.TagName
 	c.cfg.Save()
 	return nil
-}
+} */
 
 func (c *Client) onDownloadButton() {
 	c.logf("TODO: Implement Download Update")
