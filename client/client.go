@@ -12,66 +12,19 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/xackery/eqgzi-manager/config"
-
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/layout"
-	"fyne.io/fyne/v2/theme"
-	"fyne.io/fyne/v2/widget"
+	"github.com/xackery/eqgzi-manager/gui"
 )
 
 type Client struct {
-	mu                    sync.RWMutex
-	currentPath           string
-	progress              float64
-	canvas                fyne.CanvasObject
-	mainCanvas            fyne.CanvasObject
-	downloadCanvas        fyne.CanvasObject
-	zoneCombo             *widget.Select
-	blenderPathInput      *widget.Entry
-	newZoneButton         *widget.Button
-	newZonePopup          *widget.PopUp
-	newZoneName           *widget.Entry
-	newZoneSaveButton     *widget.Button
-	newZoneCancelButton   *widget.Button
-	popupStatus           *widget.Label
-	exportServerCheck     *widget.Check
-	setServerButton       *widget.Button
-	setServerPopup        *widget.PopUp
-	setServerName         *widget.Entry
-	setServerSaveButton   *widget.Button
-	setServerCancelButton *widget.Button
-	labelServer           *widget.Label
-	exportEQGCheck        *widget.Check
-	setEQButton           *widget.Button
-	setEQPopup            *widget.PopUp
-	setEQName             *widget.Entry
-	setEQSaveButton       *widget.Button
-	setEQCancelButton     *widget.Button
-	labelEQ               *widget.Label
-	progressBar           *widget.ProgressBar
-	window                fyne.Window
-	cfg                   *config.Config
-	statusLabel           *widget.Label
-	blenderOpenButton     *widget.Button
-	folderOpenButton      *widget.Button
-	eqgziOpenButton       *widget.Button
-	convertButton         *widget.Button
-	downloadEQGZIButton   *widget.Button
-	blenderDetectButton   *widget.Button
-	navMeshEditButton     *widget.Button
-	downloadButton        *widget.Button
+	currentPath string
+	cfg         *config.Config
 }
 
-func New(window fyne.Window) (*Client, error) {
+func New() (*Client, error) {
 	var err error
-	c := &Client{
-		window: window,
-	}
+	c := &Client{}
 
 	c.cfg, err = config.New(context.Background())
 	if err != nil {
@@ -84,175 +37,157 @@ func New(window fyne.Window) (*Client, error) {
 	}
 
 	//c.currentPath = `C:\src\eqp\client\zones`
+	/*
+		c.statusLabel = widget.NewLabel("")
+		c.statusLabel.Wrapping = fyne.TextWrapBreak
+		c.statusLabel.Alignment = fyne.TextAlignCenter
 
-	c.statusLabel = widget.NewLabel("")
-	c.statusLabel.Wrapping = fyne.TextWrapBreak
-	c.statusLabel.Alignment = fyne.TextAlignCenter
+		c.popupStatus = widget.NewLabel("")
+		c.popupStatus.Wrapping = fyne.TextWrapBreak
+		c.popupStatus.Alignment = fyne.TextAlignCenter
+		c.newZoneInit()
+		c.newSetServerInit()
+		c.newSetEQInit()
 
-	c.popupStatus = widget.NewLabel("")
-	c.popupStatus.Wrapping = fyne.TextWrapBreak
-	c.popupStatus.Alignment = fyne.TextAlignCenter
-	c.newZoneInit()
-	c.newSetServerInit()
-	c.newSetEQInit()
+		c.downloadButton = widget.NewButtonWithIcon("Download Update", theme.DownloadIcon(), c.onDownloadButton)
 
-	c.downloadButton = widget.NewButtonWithIcon("Download Update", theme.DownloadIcon(), c.onDownloadButton)
-
-	c.convertButton = widget.NewButtonWithIcon("Create zone.eqg", theme.NewThemedResource(eqIcon), c.onConvertButton)
-	c.blenderOpenButton = widget.NewButtonWithIcon("Open zone in blender", theme.NewThemedResource(blenderIcon), c.onBlenderOpen)
-	c.folderOpenButton = widget.NewButtonWithIcon("Open zone folder", theme.FolderOpenIcon(), c.onFolderOpen)
-	c.eqgziOpenButton = widget.NewButtonWithIcon("Debug zone in eqgzi-gui", theme.QuestionIcon(), c.onEqgziOpenButton)
-	c.downloadEQGZIButton = widget.NewButtonWithIcon("Download EQGZI & Lantern", theme.DownloadIcon(), c.onDownloadEQGZIButton)
-	c.navMeshEditButton = widget.NewButtonWithIcon("Edit Navmesh", theme.GridIcon(), c.onNavMeshEditButton)
-	c.blenderPathInput = widget.NewEntry()
-	if c.cfg.BlenderPath != "" {
-		c.blenderPathInput.SetText(c.cfg.BlenderPath)
-	}
-
-	c.blenderDetectButton = widget.NewButtonWithIcon("Detect Blender Path", theme.SearchIcon(), c.onBlenderDetectButton)
-	if c.cfg.BlenderPath == "" {
-		c.onBlenderDetectButton()
-	}
-
-	c.exportEQGCheck = widget.NewCheck("Copy .eqg to EverQuest", c.onExportEQGCheck)
-	c.exportEQGCheck.Checked = c.cfg.IsEQCopy
-	if c.cfg.IsEQCopy {
-		c.setEQButton.Show()
-	} else {
-		c.setEQButton.Hide()
-	}
-	c.labelEQ = widget.NewLabel(c.cfg.EQPath)
-
-	c.exportServerCheck = widget.NewCheck("Copy nav meshes to Server", c.onExportServerCheck)
-	c.exportServerCheck.Checked = c.cfg.IsServerCopy
-	if c.cfg.IsServerCopy {
-		c.setServerButton.Show()
-	} else {
-		c.setServerButton.Hide()
-	}
-	c.labelServer = widget.NewLabel(c.cfg.ServerPath)
-
-	zones := c.zoneRefresh()
-
-	c.zoneCombo = widget.NewSelect(zones, c.onZoneCombo)
-
-	zoneRefreshButton := widget.NewButtonWithIcon("", theme.ViewRefreshIcon(), c.onZoneRefresh)
-
-	c.progressBar = widget.NewProgressBar()
-	c.progressBar.Hide()
-
-	if len(zones) > 0 && c.cfg.LastZone == "" {
-		c.cfg.LastZone = zones[0]
-	}
-	isValidZone := false
-	for _, zone := range zones {
-		if zone == c.cfg.LastZone {
-			isValidZone = true
-			break
+		c.convertButton = widget.NewButtonWithIcon("Create zone.eqg", theme.NewThemedResource(eqIcon), c.onConvertButton)
+		c.blenderOpenButton = widget.NewButtonWithIcon("Open zone in blender", theme.NewThemedResource(blenderIcon), c.onBlenderOpen)
+		c.folderOpenButton = widget.NewButtonWithIcon("Open zone folder", theme.FolderOpenIcon(), c.onFolderOpen)
+		c.eqgziOpenButton = widget.NewButtonWithIcon("Debug zone in eqgzi-gui", theme.QuestionIcon(), c.onEqgziOpenButton)
+		c.downloadEQGZIButton = widget.NewButtonWithIcon("Download EQGZI & Lantern", theme.DownloadIcon(), c.onDownloadEQGZIButton)
+		c.navMeshEditButton = widget.NewButtonWithIcon("Edit Navmesh", theme.GridIcon(), c.onNavMeshEditButton)
+		c.blenderPathInput = widget.NewEntry()
+		if c.cfg.BlenderPath != "" {
+			c.blenderPathInput.SetText(c.cfg.BlenderPath)
 		}
-	}
-	if !isValidZone {
-		if len(zones) > 0 {
-			c.cfg.LastZone = zones[0]
+
+		c.blenderDetectButton = widget.NewButtonWithIcon("Detect Blender Path", theme.SearchIcon(), c.onBlenderDetectButton)
+		if c.cfg.BlenderPath == "" {
+			c.onBlenderDetectButton()
+		}
+
+		c.exportEQGCheck = widget.NewCheck("Copy .eqg to EverQuest", c.onExportEQGCheck)
+		c.exportEQGCheck.Checked = c.cfg.IsEQCopy
+		if c.cfg.IsEQCopy {
+			c.setEQButton.Show()
 		} else {
-			c.disableActions()
+			c.setEQButton.Hide()
 		}
-	}
+		c.labelEQ = widget.NewLabel(c.cfg.EQPath)
 
-	c.zoneCombo.SetSelected(c.cfg.LastZone)
+		c.exportServerCheck = widget.NewCheck("Copy nav meshes to Server", c.onExportServerCheck)
+		c.exportServerCheck.Checked = c.cfg.IsServerCopy
+		if c.cfg.IsServerCopy {
+			c.setServerButton.Show()
+		} else {
+			c.setServerButton.Hide()
+		}
+		c.labelServer = widget.NewLabel(c.cfg.ServerPath)
 
-	c.mainCanvas = container.NewVBox(
-		c.downloadButton,
-		widget.NewLabel(""),
-		container.NewVBox(
-			container.New(
-				layout.NewFormLayout(),
-				widget.NewLabel("Blender Path:"),
-				container.NewMax(c.blenderPathInput),
+		zones := c.zoneRefresh()
+
+		c.zoneCombo = widget.NewSelect(zones, c.onZoneCombo)
+
+		zoneRefreshButton := widget.NewButtonWithIcon("", theme.ViewRefreshIcon(), c.onZoneRefresh)
+
+		c.progressBar = widget.NewProgressBar()
+		c.progressBar.Hide()
+
+		if len(zones) > 0 && c.cfg.LastZone == "" {
+			c.cfg.LastZone = zones[0]
+		}
+		isValidZone := false
+		for _, zone := range zones {
+			if zone == c.cfg.LastZone {
+				isValidZone = true
+				break
+			}
+		}
+		if !isValidZone {
+			if len(zones) > 0 {
+				c.cfg.LastZone = zones[0]
+			} else {
+				c.disableActions()
+			}
+		}
+
+		c.zoneCombo.SetSelected(c.cfg.LastZone)
+
+		c.mainCanvas = container.NewVBox(
+			c.downloadButton,
+			widget.NewLabel(""),
+			container.NewVBox(
+				container.New(
+					layout.NewFormLayout(),
+					widget.NewLabel("Blender Path:"),
+					container.NewMax(c.blenderPathInput),
+				),
+				c.blenderDetectButton,
+
 			),
-			c.blenderDetectButton,
-			/*widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
-				dia := dialog.NewFileOpen(func(uc fyne.URIReadCloser, err error) {
-
-				}, c.window)
-				dia.SetFilter(storage.NewExtensionFileFilter(extensions []string) .FileFilter)
-				storage.FileFilter
-				//dia.SetFilter(filter storage.FileFilter)
-				dia.Show()
-			}),*/
-		),
-		widget.NewLabel(""),
-		c.newZoneButton,
-		container.NewCenter(
-			container.NewHBox(
-				widget.NewLabel("Zone: "),
-				c.zoneCombo,
-				zoneRefreshButton,
+			widget.NewLabel(""),
+			c.newZoneButton,
+			container.NewCenter(
+				container.NewHBox(
+					widget.NewLabel("Zone: "),
+					c.zoneCombo,
+					zoneRefreshButton,
+				),
 			),
-		),
-		container.NewVBox(
-			c.folderOpenButton,
-			c.blenderOpenButton,
-			container.NewHBox(
-				c.exportEQGCheck,
-				c.setEQButton,
-				c.labelEQ,
+			container.NewVBox(
+				c.folderOpenButton,
+				c.blenderOpenButton,
+				container.NewHBox(
+					c.exportEQGCheck,
+					c.setEQButton,
+					c.labelEQ,
+				),
+				container.NewHBox(
+					c.exportServerCheck,
+					c.setServerButton,
+					c.labelServer,
+				),
+				c.convertButton,
+				c.eqgziOpenButton,
+				c.navMeshEditButton,
 			),
-			container.NewHBox(
-				c.exportServerCheck,
-				c.setServerButton,
-				c.labelServer,
-			),
-			c.convertButton,
-			c.eqgziOpenButton,
-			c.navMeshEditButton,
-		),
-		c.progressBar,
-		c.statusLabel,
-	)
+			c.progressBar,
+			c.statusLabel,
+		)
 
-	c.downloadCanvas = container.NewVBox(
-		c.downloadEQGZIButton,
-		c.progressBar,
-		c.statusLabel,
-	)
+		c.downloadCanvas = container.NewVBox(
+			c.downloadEQGZIButton,
+			c.progressBar,
+			c.statusLabel,
+		)
 
-	_, err = os.Stat("tools/eqgzi.exe")
-	if err != nil {
-		c.canvas = c.downloadCanvas
-	} else {
-		_, err = os.Stat("tools/LanternExtractor.exe")
+		_, err = os.Stat("tools/eqgzi.exe")
 		if err != nil {
 			c.canvas = c.downloadCanvas
 		} else {
-			c.canvas = c.mainCanvas
-			c.window.Resize(fyne.NewSize(600, 600))
+			_, err = os.Stat("tools/LanternExtractor.exe")
+			if err != nil {
+				c.canvas = c.downloadCanvas
+			} else {
+				c.canvas = c.mainCanvas
+				c.window.Resize(fyne.NewSize(600, 600))
+			}
 		}
-	}
 
-	go c.loop()
-
+		go c.loop()
+	*/
 	return c, nil
-}
-
-func (c *Client) GetContent() fyne.CanvasObject {
-	return c.canvas
 }
 
 func (c *Client) onZoneRefresh() {
 	zones := c.zoneRefresh()
-	c.mu.Lock()
-	if c.zoneCombo != nil {
-		c.zoneCombo.Options = zones
-	}
-	c.mu.Unlock()
+	gui.SetZones(zones)
 }
 
 func (c *Client) zoneRefresh() []string {
 	zones := []string{}
-	c.mu.RLock()
 	currentPath := c.currentPath
-	c.mu.RUnlock()
 
 	_, err := os.Stat("zones")
 	if os.IsNotExist(err) {
@@ -280,11 +215,9 @@ func (c *Client) zoneRefresh() []string {
 }
 
 func (c *Client) onBlenderOpen() {
-	c.mu.RLock()
 	currentPath := c.currentPath
 	zone := c.cfg.LastZone
 	blenderPath := c.cfg.BlenderPath
-	c.mu.RUnlock()
 
 	c.logf("Opening %s in Blender", zone)
 	cmd := c.createCommand(false, blenderPath+"blender.exe", fmt.Sprintf("%s/zones/%s/%s.blend", currentPath, zone, zone))
@@ -300,10 +233,8 @@ func (c *Client) onBlenderOpen() {
 }
 
 func (c *Client) onFolderOpen() {
-	c.mu.RLock()
 	currentPath := c.currentPath
 	zone := c.cfg.LastZone
-	c.mu.RUnlock()
 
 	exePath := "explorer.exe"
 	if runtime.GOOS == "darwin" {
@@ -324,30 +255,27 @@ func (c *Client) onFolderOpen() {
 }
 
 func (c *Client) onZoneCombo(value string) {
-	c.mu.Lock()
 	c.cfg.LastZone = value
 	err := c.cfg.Save()
 	if err != nil {
 		c.logf("Failed saving after zone select: %s", err)
 		return
 	}
-	c.blenderOpenButton.SetText(fmt.Sprintf("Open %s in Blender", c.cfg.LastZone))
-	c.convertButton.SetText(fmt.Sprintf("Create %s.eqg", c.cfg.LastZone))
-	c.folderOpenButton.SetText(fmt.Sprintf("Open %s folder", c.cfg.LastZone))
-	c.eqgziOpenButton.SetText(fmt.Sprintf("Debug %s in eqgzi-gui", c.cfg.LastZone))
+	/*
+		c.blenderOpenButton.SetText(fmt.Sprintf("Open %s in Blender", c.cfg.LastZone))
+		c.convertButton.SetText(fmt.Sprintf("Create %s.eqg", c.cfg.LastZone))
+		c.folderOpenButton.SetText(fmt.Sprintf("Open %s folder", c.cfg.LastZone))
+		c.eqgziOpenButton.SetText(fmt.Sprintf("Debug %s in eqgzi-gui", c.cfg.LastZone))*/
 	c.enableActions()
-	c.mu.Unlock()
 	c.logf("Focused on %s", value)
 }
 
 func (c *Client) onExportEQGCheck(value bool) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
 	c.cfg.IsEQCopy = value
 	if c.cfg.IsEQCopy {
-		c.setEQButton.Show()
+		gui.SetEQPathVisible(true)
 	} else {
-		c.setEQButton.Hide()
+		gui.SetEQPathVisible(false)
 	}
 	err := c.cfg.Save()
 	if err != nil {
@@ -357,13 +285,11 @@ func (c *Client) onExportEQGCheck(value bool) {
 }
 
 func (c *Client) onExportServerCheck(value bool) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
 	c.cfg.IsServerCopy = value
 	if c.cfg.IsServerCopy {
-		c.setServerButton.Show()
+		gui.SetServerVisible(true)
 	} else {
-		c.setServerButton.Hide()
+		gui.SetServerVisible(false)
 	}
 	err := c.cfg.Save()
 	if err != nil {
@@ -373,10 +299,8 @@ func (c *Client) onExportServerCheck(value bool) {
 }
 
 func (c *Client) onEqgziOpenButton() {
-	c.mu.RLock()
 	currentPath := c.currentPath
 	zone := c.cfg.LastZone
-	c.mu.RUnlock()
 
 	path := fmt.Sprintf("%s/tools/gui/settings.lua", currentPath)
 	settings, err := os.ReadFile(path)
@@ -428,32 +352,30 @@ func (c *Client) onEqgziOpenButton() {
 func (c *Client) logf(format string, a ...interface{}) {
 	text := fmt.Sprintf(format, a...)
 	fmt.Println(text)
-	c.statusLabel.SetText(text)
 }
 
 func (c *Client) disableActions() {
-	c.blenderOpenButton.Disable()
-	c.folderOpenButton.Disable()
-	c.eqgziOpenButton.Disable()
-	c.convertButton.Disable()
-	c.exportEQGCheck.Disable()
-	c.exportServerCheck.Disable()
+	gui.SetBlenderOpenEnabled(false)
+	gui.SetFolderOpenEnabled(false)
+	gui.SetEQGZIOpenEnabled(false)
+	gui.SetConvertEnabled(false)
+	gui.SetExportEQGEnabled(false)
+	gui.SetExportServerEnabled(false)
+
 }
 
 func (c *Client) enableActions() {
-	c.blenderOpenButton.Enable()
-	c.folderOpenButton.Enable()
-	c.eqgziOpenButton.Enable()
-	c.convertButton.Enable()
-	c.exportEQGCheck.Enable()
-	c.exportServerCheck.Enable()
+	gui.SetBlenderOpenEnabled(true)
+	gui.SetFolderOpenEnabled(true)
+	gui.SetEQGZIOpenEnabled(true)
+	gui.SetConvertEnabled(true)
+	gui.SetExportEQGEnabled(true)
+	gui.SetExportServerEnabled(true)
 }
 
 func (c *Client) onNavMeshEditButton() {
-	c.mu.RLock()
 	currentPath := c.currentPath
 	zone := c.cfg.LastZone
-	c.mu.RUnlock()
 
 	cmd := c.createCommand(false, fmt.Sprintf("%s/tools/map_edit/map_edit.exe", currentPath), zone)
 	c.logf("running command: map_edit %s", zone)
@@ -467,42 +389,8 @@ func (c *Client) onNavMeshEditButton() {
 	}
 }
 
-func (c *Client) addProgress(amount float64) float64 {
-	c.progress += amount
-
-	if c.progress > 1 {
-		fmt.Printf("progress > 1: %0.2f\n", c.progress)
-		c.progress = 1
-	}
-	return c.progress
-}
-
-func (c *Client) loop() {
-	err := c.updateCheck()
-	if err != nil {
-		fmt.Println("Failed loop updateCheck:", err)
-	}
-	for {
-		time.Sleep(24 * time.Hour)
-		err := c.updateCheck()
-		if err != nil {
-			fmt.Println("Failed loop updateCheck:", err)
-		}
-	}
-}
-
-func (c *Client) updateCheck() error {
-	err := c.updateCheckLantern()
-	if err != nil {
-		return fmt.Errorf("updateCheckLantern: %w", err)
-	}
-	return nil
-}
-
 func (c *Client) updateCheckLantern() error {
-	c.mu.Lock()
 	lanternVersion := c.cfg.LanternVersion
-	c.mu.Unlock()
 
 	gitReply := &gitReply{}
 	req, err := http.NewRequest("GET", "https://api.github.com/repos/LanternEQ/LanternExtractor/releases/latest", nil)

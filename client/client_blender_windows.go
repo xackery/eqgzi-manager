@@ -6,6 +6,7 @@ package client
 import (
 	"strings"
 
+	"github.com/xackery/eqgzi-manager/gui"
 	"golang.org/x/sys/windows/registry"
 )
 
@@ -25,8 +26,8 @@ func (c *Client) onBlenderDetectButton() {
 	s = strings.ReplaceAll(s, `"`, "")
 	s = strings.TrimSuffix(s, ", 1")
 	s = strings.TrimSuffix(s, "blender-launcher.exe")
-	//s += "blender.exe"
-	c.blenderPathInput.SetText(s)
+
+	gui.SetBlenderText(s)
 	c.cfg.BlenderPath = s
 	err = c.cfg.Save()
 	if err != nil {

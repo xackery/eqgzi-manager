@@ -7,10 +7,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/xackery/eqgzi-manager/gui"
 )
 
 func (c *Client) onConvertButton() {
-	c.mu.RLock()
 	currentPath := c.currentPath
 	zone := c.cfg.LastZone
 	isEQCopy := c.cfg.IsEQCopy
@@ -18,16 +19,12 @@ func (c *Client) onConvertButton() {
 	isServerCopy := c.cfg.IsServerCopy
 	serverPath := c.cfg.ServerPath
 	blenderPath := c.cfg.BlenderPath
-	c.mu.RUnlock()
+
 	c.logf("Converting %s", zone)
 
-	c.progressBar.Show()
-	c.progress = 0
-	c.progressBar.SetValue(c.addProgress(0.1))
-	c.statusLabel.Hide()
+	gui.SetProgress(1)
 	defer func() {
-		c.progressBar.Hide()
-		c.statusLabel.Show()
+		gui.SetProgress(0)
 	}()
 
 	env := []string{
@@ -60,7 +57,7 @@ func (c *Client) onConvertButton() {
 	}
 
 	reader := io.MultiReader(stdout, stderr)
-	c.progressBar.SetValue(c.addProgress(0.1))
+	gui.SetProgress(gui.Progress() + 1)
 	err = c.processOutput(reader, currentPath, zone, "convert.log")
 	if err != nil {
 		c.logf("Failed stdout: %s", err)
@@ -102,7 +99,7 @@ func (c *Client) onConvertButton() {
 			c.logf("Failed copy_eq.bat: %s", err)
 			return
 		}
-		c.progressBar.SetValue(c.addProgress(0.1))
+		gui.AddProgress(1)
 
 	}
 
@@ -136,8 +133,7 @@ func (c *Client) onConvertButton() {
 			c.logf("Failed copy_server.bat: %s", err)
 			return
 		}
-		c.progressBar.SetValue(c.addProgress(0.1))
-
+		gui.AddProgress(1)
 	}
 	c.logf("Created %s.eqg", zone)
 }
@@ -176,7 +172,7 @@ func (c *Client) processOutput(in io.Reader, currentPath string, zone string, lo
 				c.logf("minor note %s:%d %s %s", logName, lineNumber, line, err)
 			} else {
 				step = stepNum
-				c.progressBar.SetValue(c.addProgress(0.05))
+				gui.AddProgress(1)
 			}
 		}
 

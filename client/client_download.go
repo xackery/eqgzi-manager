@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"os"
 
-	"fyne.io/fyne/v2"
+	"github.com/xackery/eqgzi-manager/gui"
 )
 
 type gitReply struct {
@@ -22,16 +22,9 @@ type gitReply struct {
 
 func (c *Client) onDownloadEQGZIButton() {
 
-	c.downloadEQGZIButton.Disable()
-	defer c.downloadEQGZIButton.Enable()
-	c.progress = 0
-
-	c.statusLabel.Hide()
-	c.progressBar.Show()
-	defer func() {
-		c.statusLabel.Show()
-		c.progressBar.Hide()
-	}()
+	gui.SetDownloadEQGZIEnabled(false)
+	defer gui.SetDownloadEQGZIEnabled(true)
+	gui.SetProgress(0)
 
 	err := c.downloadEQGZI()
 	if err != nil {
@@ -45,14 +38,13 @@ func (c *Client) onDownloadEQGZIButton() {
 		return
 	}
 
-	c.window.SetContent(c.mainCanvas)
-	c.window.Resize(fyne.NewSize(600, 600))
-	c.window.CenterOnScreen()
+	//TODO: Resize canvas to 600x600
+	//TODO: center on screen
 }
 
 func (c *Client) downloadEQGZI() error {
 
-	c.progressBar.SetValue(c.addProgress(0.1))
+	gui.AddProgress(1)
 
 	gitReply := &gitReply{}
 	req, err := http.NewRequest("GET", "https://api.github.com/repos/xackery/eqgzi/releases/latest", nil)
@@ -60,7 +52,7 @@ func (c *Client) downloadEQGZI() error {
 		return fmt.Errorf("new git request: %w", err)
 	}
 
-	c.progressBar.SetValue(c.addProgress(0.1))
+	gui.AddProgress(1)
 
 	client := http.DefaultClient
 	resp, err := client.Do(req)
@@ -75,7 +67,8 @@ func (c *Client) downloadEQGZI() error {
 		return fmt.Errorf("decode git request: %w", err)
 	}
 	assetURL := ""
-	c.progressBar.SetValue(c.addProgress(0.05))
+
+	gui.AddProgress(1)
 
 	zipName := fmt.Sprintf("eqgzi-%s.zip", gitReply.TagName)
 	for _, asset := range gitReply.Assets {
@@ -88,7 +81,7 @@ func (c *Client) downloadEQGZI() error {
 		return fmt.Errorf("download eqgzi zip not found")
 	}
 	c.logf("downloading %s", assetURL)
-	c.progressBar.SetValue(c.addProgress(0.05))
+	gui.AddProgress(1)
 
 	err = os.Mkdir("cache", os.ModePerm)
 	if err != nil && !os.IsExist(err) {
@@ -122,7 +115,7 @@ func (c *Client) downloadEQGZI() error {
 		}
 	}
 
-	c.progressBar.SetValue(c.addProgress(0.05))
+	gui.AddProgress(1)
 
 	c.logf("Extracting %s", zipName)
 	err = os.Mkdir("tools", os.ModePerm)
@@ -166,13 +159,13 @@ func (c *Client) downloadEQGZI() error {
 			return fmt.Errorf("copy %s: %w", zf.Name, err)
 		}
 
-		c.progressBar.SetValue(c.addProgress(0.01))
+		gui.AddProgress(1)
 
 		dstFile.Close()
 		fileInArchive.Close()
 	}
 
-	c.progressBar.SetValue(c.addProgress(0.01))
+	gui.AddProgress(1)
 
 	c.cfg.EQGZIVersion = gitReply.TagName
 	c.cfg.Save()
@@ -180,7 +173,7 @@ func (c *Client) downloadEQGZI() error {
 }
 
 func (c *Client) onDownloadLantern() error {
-	c.progressBar.SetValue(c.addProgress(0.1))
+	gui.AddProgress(1)
 
 	gitReply := &gitReply{}
 	req, err := http.NewRequest("GET", "https://api.github.com/repos/LanternEQ/LanternExtractor/releases/latest", nil)
@@ -188,7 +181,7 @@ func (c *Client) onDownloadLantern() error {
 		return fmt.Errorf("new git request: %w", err)
 	}
 
-	c.progressBar.SetValue(c.addProgress(0.05))
+	gui.AddProgress(1)
 
 	client := http.DefaultClient
 	resp, err := client.Do(req)
@@ -203,7 +196,7 @@ func (c *Client) onDownloadLantern() error {
 		return fmt.Errorf("decode git request: %w", err)
 	}
 	assetURL := ""
-	c.progressBar.SetValue(c.addProgress(0.05))
+	gui.AddProgress(1)
 
 	zipName := fmt.Sprintf("LanternExtractor-%s.zip", gitReply.TagName)
 	for _, asset := range gitReply.Assets {
@@ -216,7 +209,7 @@ func (c *Client) onDownloadLantern() error {
 		return fmt.Errorf("download eqgzi zip not found")
 	}
 	c.logf("downloading %s", assetURL)
-	c.progressBar.SetValue(c.addProgress(0.05))
+	gui.AddProgress(1)
 
 	err = os.Mkdir("cache", os.ModePerm)
 	if err != nil && !os.IsExist(err) {
@@ -250,7 +243,7 @@ func (c *Client) onDownloadLantern() error {
 		}
 	}
 
-	c.progressBar.SetValue(c.addProgress(0.05))
+	gui.AddProgress(1)
 
 	c.logf("Extracting %s", zipName)
 	err = os.Mkdir("tools", os.ModePerm)
@@ -289,13 +282,13 @@ func (c *Client) onDownloadLantern() error {
 			return fmt.Errorf("copy %s: %w", zf.Name, err)
 		}
 
-		c.progressBar.SetValue(c.addProgress(0.05))
+		gui.AddProgress(1)
 
 		dstFile.Close()
 		fileInArchive.Close()
 	}
 
-	c.progressBar.SetValue(c.addProgress(0.05))
+	gui.AddProgress(1)
 	c.cfg.LanternVersion = gitReply.TagName
 	c.cfg.Save()
 	return nil
